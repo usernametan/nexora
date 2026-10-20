@@ -5,12 +5,18 @@ import { EarthDashboard } from './EarthDashboard'
 import { MoonDashboard } from './MoonDashboard'
 import { MarsDashboard } from './MarsDashboard'
 import { SaturnDashboard } from './SaturnDashboard'
+import { MercuryDashboard } from './MercuryDashboard'
+import { JupiterDashboard } from './JupiterDashboard'
+import { NeptuneDashboard } from './NeptuneDashboard'
 
 const dashboards = {
   earth: EarthDashboard,
   moon: MoonDashboard,
   mars: MarsDashboard,
   saturn: SaturnDashboard,
+  mercury: MercuryDashboard,
+  jupiter: JupiterDashboard,
+  neptune: NeptuneDashboard,
 }
 
 export function PlanetDashboard({ planet, isClosing, reducedMotion, onBack, onExited }) {

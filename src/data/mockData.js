@@ -1,3 +1,10 @@
+const isoDay = (offset = 0) => {
+  const date = new Date()
+  date.setHours(12, 0, 0, 0)
+  date.setDate(date.getDate() - offset)
+  return date.toISOString().slice(0, 10)
+}
+
 export const planets = [
   {
     id: 'earth',
@@ -77,7 +84,7 @@ export const planets = [
     height: 0.76,
     tilt: 0.05,
     rotationSpeed: 0.08,
-    locked: true,
+    locked: false,
   },
   {
     id: 'jupiter',
@@ -93,7 +100,7 @@ export const planets = [
     height: -0.82,
     tilt: 0.08,
     rotationSpeed: 0.11,
-    locked: true,
+    locked: false,
   },
   {
     id: 'neptune',
@@ -109,7 +116,7 @@ export const planets = [
     height: 0.56,
     tilt: -0.15,
     rotationSpeed: 0.09,
-    locked: true,
+    locked: false,
   },
 ]
 
@@ -171,30 +178,116 @@ export const subjectGroups = [
 ]
 
 export const vaultFiles = [
-  { name: 'DSA_Notes.pdf', subject: 'Computer Science', pages: 24, size: '3.8 MB', updated: 'Today' },
-  { name: 'DBMS_Module_3.pdf', subject: 'DBMS', pages: 31, size: '5.2 MB', updated: 'Yesterday' },
-  { name: 'OS_Unit_2.pdf', subject: 'Operating Systems', pages: 18, size: '2.7 MB', updated: 'Sep 21' },
-  { name: 'Research_Paper.pdf', subject: 'Research', pages: 42, size: '8.1 MB', updated: 'Sep 18' },
+  { id: 'dsa-notes', name: 'DSA_Notes.pdf', subject: 'Computer Science', pages: 24, size: '3.8 MB', updated: 'Today' },
+  { id: 'dbms-module-3', name: 'DBMS_Module_3.pdf', subject: 'DBMS', pages: 31, size: '5.2 MB', updated: 'Yesterday' },
+  { id: 'os-unit-2', name: 'OS_Unit_2.pdf', subject: 'Operating Systems', pages: 18, size: '2.7 MB', updated: 'Sep 21' },
+  { id: 'research-paper', name: 'Research_Paper.pdf', subject: 'Research', pages: 42, size: '8.1 MB', updated: 'Sep 18' },
+  { id: 'linear-algebra', name: 'Linear_Algebra_Cheatsheet.pdf', subject: 'Mathematics', pages: 12, size: '1.4 MB', updated: 'Sep 14' },
+  { id: 'graphs', name: 'Graph_Algorithms.pdf', subject: 'Computer Science', pages: 36, size: '4.9 MB', updated: 'Sep 11' },
+  { id: 'calculus', name: 'Calculus_Problem_Set.pdf', subject: 'Mathematics', pages: 21, size: '2.2 MB', updated: 'Sep 6' },
+  { id: 'paper-notes', name: 'Research_Notes.pdf', subject: 'Literature', pages: 16, size: '1.9 MB', updated: 'Sep 2' },
 ]
 
 export const focusSessions = [
-  { label: 'DSA', duration: '45m', color: '#75aaf4' },
-  { label: 'Project', duration: '1h 20m', color: '#a88ee5' },
-  { label: 'DBMS', duration: '1h 19m', color: '#d9ab72' },
-]
-
-export const weeklyFocus = [
-  { day: 'M', hours: 3.2 },
-  { day: 'T', hours: 4.6 },
-  { day: 'W', hours: 2.8 },
-  { day: 'T', hours: 5.1 },
-  { day: 'F', hours: 3.8 },
-  { day: 'S', hours: 1.6 },
-  { day: 'S', hours: 0.8 },
+  { id: 'focus-1', label: 'DSA', minutes: 45, color: '#75aaf4', date: isoDay(0) },
+  { id: 'focus-2', label: 'Project', minutes: 80, color: '#a88ee5', date: isoDay(0) },
+  { id: 'focus-3', label: 'DBMS', minutes: 79, color: '#d9ab72', date: isoDay(1) },
+  { id: 'focus-4', label: 'DSA', minutes: 60, color: '#75aaf4', date: isoDay(2) },
+  { id: 'focus-5', label: 'Project', minutes: 50, color: '#a88ee5', date: isoDay(4) },
+  { id: 'focus-6', label: 'DBMS', minutes: 90, color: '#d9ab72', date: isoDay(5) },
 ]
 
 export const ambientOptions = [
   { id: 'space', label: 'Ambient Space', detail: 'Low harmonic drift' },
   { id: 'lofi', label: 'Lo-Fi', detail: 'Soft instrumental pulse' },
   { id: 'noise', label: 'White Noise', detail: 'Continuous deep focus' },
+]
+
+export const mercuryItems = [
+  {
+    id: 'mercury-1',
+    title: 'Pick up the parcel',
+    detail: 'Post office · before 6pm',
+    kind: 'errand',
+    done: false,
+    created: isoDay(0),
+  },
+  {
+    id: 'mercury-2',
+    title: 'Call the dentist',
+    detail: 'Reschedule the cleaning appointment',
+    kind: 'errand',
+    done: false,
+    created: isoDay(0),
+  },
+  {
+    id: 'mercury-3',
+    title: 'Idea: Sunday review',
+    detail: 'Twenty minutes to plan the week ahead',
+    kind: 'note',
+    done: false,
+    created: isoDay(1),
+  },
+  {
+    id: 'mercury-4',
+    title: 'Return library books',
+    detail: 'Two books due this week',
+    kind: 'errand',
+    done: true,
+    created: isoDay(2),
+  },
+]
+
+export const jupiterBudget = 1200
+
+export const jupiterCategories = [
+  { id: 'food', label: 'Food', color: '#d9b273' },
+  { id: 'transport', label: 'Transport', color: '#7fa9dd' },
+  { id: 'study', label: 'Study', color: '#a88ee5' },
+  { id: 'home', label: 'Home', color: '#7fb59b' },
+  { id: 'fun', label: 'Fun', color: '#dd8b69' },
+]
+
+export const jupiterExpenses = [
+  { id: 'expense-1', title: 'Weekly groceries', category: 'food', amount: 86.4, date: isoDay(0) },
+  { id: 'expense-2', title: 'Metro card top-up', category: 'transport', amount: 30, date: isoDay(1) },
+  { id: 'expense-3', title: 'DBMS textbook', category: 'study', amount: 64.5, date: isoDay(3) },
+  { id: 'expense-4', title: 'Coffee with friends', category: 'fun', amount: 18.75, date: isoDay(4) },
+  { id: 'expense-5', title: 'Desk lamp', category: 'home', amount: 42, date: isoDay(6) },
+  { id: 'expense-6', title: 'Monthly internet', category: 'home', amount: 55, date: isoDay(9) },
+]
+
+export const neptuneBookmarks = [
+  {
+    id: 'bookmark-1',
+    title: 'React documentation',
+    url: 'https://react.dev',
+    tags: ['development', 'reference'],
+    note: 'Hooks, component patterns, and the new docs.',
+    added: isoDay(0),
+  },
+  {
+    id: 'bookmark-2',
+    title: 'Three.js manual',
+    url: 'https://threejs.org/manual/',
+    tags: ['3d', 'reference'],
+    note: 'Primer for scenes, materials, and lighting.',
+    added: isoDay(2),
+  },
+  {
+    id: 'bookmark-3',
+    title: 'MDN Web Docs',
+    url: 'https://developer.mozilla.org',
+    tags: ['development', 'reference'],
+    note: 'The reliable answer for almost everything web.',
+    added: isoDay(4),
+  },
+  {
+    id: 'bookmark-4',
+    title: 'A Pattern Language',
+    url: 'https://en.wikipedia.org/wiki/A_Pattern_Language',
+    tags: ['design', 'reading'],
+    note: 'Ideas for designing spaces that feel human.',
+    added: isoDay(7),
+  },
 ]

@@ -6,7 +6,7 @@ import { OrbitingPlanet } from './OrbitingPlanet'
 import { StarField } from './StarField'
 import { Sun } from './Sun'
 
-const mobilePlanetIds = new Set(['earth', 'moon', 'mars', 'saturn', 'mercury'])
+const mobilePlanetIds = new Set(['earth', 'moon', 'mars', 'saturn', 'mercury', 'jupiter', 'neptune'])
 
 export function CosmosScene({ focusedPlanet, mobile, reducedMotion, onSelect, onHover }) {
   return (
