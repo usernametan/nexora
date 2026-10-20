@@ -1,4 +1,5 @@
 import { moonMetrics } from '../../data/mockData'
+import { useLocalStorage } from '../../hooks/useLocalStorage'
 import { GlassPanel } from '../ui/GlassPanel'
 
 const cycleDays = Array.from({ length: 28 }, (_, index) => index + 1)
@@ -13,6 +14,15 @@ const getCyclePhase = (day) => {
 }
 
 export function MoonDashboard() {
+  const [glasses, setGlasses] = useLocalStorage('personal-cosmos:moon-hydration', 5)
+  const hydration = Math.min(8, Math.max(0, Number(glasses) || 0))
+  const waterLevel = `${(hydration / 8) * 100}%`
+  const metrics = moonMetrics.map((metric) => (
+    metric.label === 'Hydration'
+      ? { ...metric, value: `${hydration} / 8`, score: Math.round((hydration / 8) * 100) }
+      : metric
+  ))
+
   return (
     <div className="dashboard-page moon-dashboard">
       <header className="dashboard-header">
@@ -21,7 +31,7 @@ export function MoonDashboard() {
           <h1>A quieter kind of progress</h1>
           <p className="dashboard-date">Your body, gently observed.</p>
         </div>
-        <span className="soft-badge">Static preview</span>
+        <span className="soft-badge">Saved on this device</span>
       </header>
 
       <div className="wellness-hero">
@@ -39,13 +49,35 @@ export function MoonDashboard() {
 
         <GlassPanel className="water-card">
           <div className="metric-label">Hydration</div>
-          <div className="water-gauge" style={{ '--water-level': '62.5%' }}>
+          <div className="water-gauge" style={{ '--water-level': waterLevel }}>
             <div>
-              <strong>5</strong>
+              <strong>{hydration}</strong>
               <span>/ 8 glasses</span>
             </div>
           </div>
-          <p>Three more moments of water to reach your daily rhythm.</p>
+          <div className="water-controls">
+            <button
+              type="button"
+              onClick={() => setGlasses((current) => Math.max(0, current - 1))}
+              disabled={hydration === 0}
+              aria-label="Remove a glass of water"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              onClick={() => setGlasses((current) => Math.min(8, current + 1))}
+              disabled={hydration === 8}
+              aria-label="Log a glass of water"
+            >
+              +
+            </button>
+          </div>
+          <p>
+            {hydration === 8
+              ? 'Daily hydration complete. Beautifully in rhythm.'
+              : `${8 - hydration} more ${8 - hydration === 1 ? 'glass' : 'glasses'} of water to reach your daily rhythm.`}
+          </p>
         </GlassPanel>
       </div>
 
@@ -58,7 +90,7 @@ export function MoonDashboard() {
             </div>
           </div>
           <div className="status-list">
-            {moonMetrics.map((metric) => (
+            {metrics.map((metric) => (
               <div className="status-row" key={metric.label}>
                 <div>
                   <span>{metric.label}</span>
