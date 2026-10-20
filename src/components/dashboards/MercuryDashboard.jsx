@@ -1,13 +1,15 @@
 import { useState } from 'react'
+import { useProfile } from '../../context/profile'
 import { mercuryItems } from '../../data/mockData'
 import { useLocalStorage } from '../../hooks/useLocalStorage'
-import { createId, formatShortDate } from '../../utils/format'
+import { createId, formatShortDate, todayIso } from '../../utils/format'
 import { CheckIcon, EditIcon, PlusIcon, TrashIcon } from '../ui/Icons'
 import { GlassPanel } from '../ui/GlassPanel'
 
 const emptyDraft = { title: '', detail: '', kind: 'errand' }
 
 export function MercuryDashboard() {
+  const { profile } = useProfile()
   const [items, setItems] = useLocalStorage('personal-cosmos:mercury-items', mercuryItems)
   const [draft, setDraft] = useState(emptyDraft)
   const [editingId, setEditingId] = useState(null)
@@ -43,7 +45,7 @@ export function MercuryDashboard() {
         detail,
         kind: draft.kind,
         done: false,
-        created: new Date().toISOString().slice(0, 10),
+        created: todayIso(profile.timezone),
       }])
     }
     cancelEdit()

@@ -5,18 +5,24 @@ import { SpaceshipCursor } from './components/cosmos/SpaceshipCursor'
 import { LockedPlanet } from './components/dashboards/LockedPlanet'
 import { PlanetDashboard } from './components/dashboards/PlanetDashboard'
 import { PlanetSidebar } from './components/navigation/PlanetSidebar'
+import { Onboarding } from './components/onboarding/Onboarding'
+import { SettingsPanel } from './components/settings/SettingsPanel'
 import { SparkIcon } from './components/ui/Icons'
+import { ProfileProvider } from './context/ProfileContext'
+import { useProfile } from './context/profile'
 import { planets } from './data/mockData'
 import { useMediaQuery } from './hooks/useMediaQuery'
 import { useReducedMotion } from './hooks/useReducedMotion'
 
-export default function App() {
+function CosmosApp() {
   const [activePlanet, setActivePlanet] = useState(null)
   const [lockedPlanet, setLockedPlanet] = useState(null)
   const [hoveredPlanet, setHoveredPlanet] = useState(null)
   const [isClosing, setIsClosing] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const mobile = useMediaQuery('(max-width: 760px)')
   const reducedMotion = useReducedMotion()
+  const { profile } = useProfile()
   const activePlanetData = useMemo(() => planets.find((planet) => planet.id === activePlanet) ?? null, [activePlanet])
 
   const handleSelect = useCallback((planet) => {
@@ -43,12 +49,16 @@ export default function App() {
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key !== 'Escape') return
+      if (settingsOpen) {
+        setSettingsOpen(false)
+        return
+      }
       if (lockedPlanet) setLockedPlanet(null)
       else handleBack()
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleBack, lockedPlanet])
+  }, [handleBack, lockedPlanet, settingsOpen])
 
   return (
     <div className={`app-shell ${activePlanetData ? 'has-active-planet' : 'is-cosmos'}`}>
@@ -68,6 +78,7 @@ export default function App() {
         activePlanet={activePlanetData}
         onSelect={handleSelect}
         onHome={handleBack}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
 
       <div className={`cosmos-interface ${activePlanetData ? 'is-hidden' : ''}`} aria-hidden={Boolean(activePlanetData)}>
@@ -95,7 +106,7 @@ export default function App() {
       </div>
 
       <SpaceshipCursor
-        enabled={!activePlanetData && !lockedPlanet}
+        enabled={!activePlanetData && !lockedPlanet && !settingsOpen && profile.onboarded}
         targeted={Boolean(hoveredPlanet)}
         reducedMotion={reducedMotion}
       />
@@ -119,6 +130,17 @@ export default function App() {
           onClose={() => setLockedPlanet(null)}
         />
       )}
+
+      {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
+      {!profile.onboarded && <Onboarding />}
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <ProfileProvider>
+      <CosmosApp />
+    </ProfileProvider>
   )
 }

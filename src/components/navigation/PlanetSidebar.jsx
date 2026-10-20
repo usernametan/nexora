@@ -1,5 +1,5 @@
 import { activePlanets, lockedPlanets } from '../../data/mockData'
-import { LockIcon, OrbitIcon } from '../ui/Icons'
+import { LockIcon, OrbitIcon, SettingsIcon } from '../ui/Icons'
 
 function PlanetGlyph({ planet }) {
   return (
@@ -10,7 +10,7 @@ function PlanetGlyph({ planet }) {
   )
 }
 
-export function PlanetSidebar({ activePlanet, onSelect, onHome }) {
+export function PlanetSidebar({ activePlanet, onSelect, onHome, onOpenSettings }) {
   return (
     <aside className="planet-sidebar">
       <button className="brand-mark" type="button" onClick={onHome} disabled={!activePlanet} aria-label="Return to cosmos">
@@ -74,6 +74,9 @@ export function PlanetSidebar({ activePlanet, onSelect, onHome }) {
       <div className="sidebar-system">
         <div className="system-signal"><i /><i /><i /><i /></div>
         <span><strong>System online</strong><small>7 worlds connected</small></span>
+        <button className="sidebar-settings" type="button" onClick={onOpenSettings} aria-label="Open personal settings">
+          <SettingsIcon size={14} />
+        </button>
       </div>
     </aside>
   )

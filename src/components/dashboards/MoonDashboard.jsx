@@ -1,5 +1,7 @@
+import { useProfile } from '../../context/profile'
 import { moonMetrics } from '../../data/mockData'
-import { useLocalStorage } from '../../hooks/useLocalStorage'
+import { dailyStorageKey, useCurrentDay, useLocalStorage } from '../../hooks/useLocalStorage'
+import { formatLongDate } from '../../utils/format'
 import { GlassPanel } from '../ui/GlassPanel'
 
 const cycleDays = Array.from({ length: 28 }, (_, index) => index + 1)
@@ -14,7 +16,9 @@ const getCyclePhase = (day) => {
 }
 
 export function MoonDashboard() {
-  const [glasses, setGlasses] = useLocalStorage('personal-cosmos:moon-hydration', 5)
+  const { profile } = useProfile()
+  const today = useCurrentDay(profile.timezone)
+  const [glasses, setGlasses] = useLocalStorage(dailyStorageKey('personal-cosmos:moon-hydration', today), 0)
   const hydration = Math.min(8, Math.max(0, Number(glasses) || 0))
   const waterLevel = `${(hydration / 8) * 100}%`
   const metrics = moonMetrics.map((metric) => (
@@ -85,7 +89,7 @@ export function MoonDashboard() {
         <GlassPanel className="status-panel">
           <div className="section-heading">
             <div>
-              <p className="section-kicker">September 25</p>
+              <p className="section-kicker">{formatLongDate(today)}</p>
               <h2>Daily status</h2>
             </div>
           </div>
