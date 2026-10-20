@@ -1,5 +1,5 @@
-import { useState } from 'react'
 import { calendarEvents, earthTasks, timeline } from '../../data/mockData'
+import { useLocalStorage } from '../../hooks/useLocalStorage'
 import { CheckIcon, ClockIcon } from '../ui/Icons'
 import { GlassPanel } from '../ui/GlassPanel'
 
@@ -9,15 +9,19 @@ const calendarCells = Array.from({ length: 35 }, (_, index) => {
 })
 
 export function EarthDashboard() {
-  const [completed, setCompleted] = useState(() => new Set(earthTasks.filter((task) => task.done).map((task) => task.id)))
+  const [completedIds, setCompletedIds] = useLocalStorage(
+    'personal-cosmos:earth-completed',
+    () => earthTasks.filter((task) => task.done).map((task) => task.id),
+  )
+  const completed = new Set(Array.isArray(completedIds) ? completedIds : [])
   const completion = Math.round((completed.size / earthTasks.length) * 100)
 
   const toggleTask = (taskId) => {
-    setCompleted((current) => {
-      const next = new Set(current)
-      if (next.has(taskId)) next.delete(taskId)
-      else next.add(taskId)
-      return next
+    setCompletedIds((current) => {
+      const safeCurrent = Array.isArray(current) ? current : []
+      return safeCurrent.includes(taskId)
+        ? safeCurrent.filter((id) => id !== taskId)
+        : [...safeCurrent, taskId]
     })
   }
 

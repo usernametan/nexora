@@ -1,7 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ambientOptions, focusSessions, weeklyFocus } from '../../data/mockData'
+import { readStoredValue, useLocalStorage, writeStoredValue } from '../../hooks/useLocalStorage'
 import { PauseIcon, PlayIcon, ResetIcon, SparkIcon } from '../ui/Icons'
 import { GlassPanel } from '../ui/GlassPanel'
+
+const TIMER_DURATION = 25 * 60
+const SECONDS_KEY = 'personal-cosmos:saturn-seconds'
 
 const formatTimer = (seconds) => {
   const minutes = Math.floor(seconds / 60)
@@ -10,28 +14,64 @@ const formatTimer = (seconds) => {
 }
 
 export function SaturnDashboard() {
-  const [seconds, setSeconds] = useState(25 * 60)
+  const [seconds, setSeconds] = useState(() => {
+    const stored = readStoredValue(SECONDS_KEY, TIMER_DURATION)
+    if (typeof stored !== 'number' || !Number.isFinite(stored)) return TIMER_DURATION
+    return Math.min(TIMER_DURATION, Math.max(0, stored))
+  })
+  const [sessions, setSessions] = useLocalStorage('personal-cosmos:saturn-sessions', focusSessions)
+  const [ambient, setAmbient] = useLocalStorage('personal-cosmos:saturn-ambient', 'space')
   const [running, setRunning] = useState(false)
-  const [ambient, setAmbient] = useState('space')
+  const secondsRef = useRef(seconds)
 
-   useEffect(() => {
+  useEffect(() => {
+    secondsRef.current = seconds
+  }, [seconds])
+
+  useEffect(() => () => {
+    writeStoredValue(SECONDS_KEY, secondsRef.current)
+  }, [])
+
+  useEffect(() => {
     if (!running) return undefined
     const timer = window.setInterval(() => {
-      setSeconds((current) => {
-        if (current <= 1) {
-          setRunning(false)
-          return 0
-        }
-        return current - 1
-      })
+      setSeconds((current) => Math.max(0, current - 1))
     }, 1000)
     return () => window.clearInterval(timer)
   }, [running])
 
+  useEffect(() => {
+    if (!running || seconds > 0) return
+    setRunning(false)
+    writeStoredValue(SECONDS_KEY, 0)
+    setSessions((current) => [...current, { label: 'Focus', duration: '25m', color: '#d9ab72' }])
+  }, [running, seconds, setSessions])
+
   const timerProgress = useMemo(() => {
-    const elapsed = 25 * 60 - seconds
-    return `${(elapsed / (25 * 60)) * 360}deg`
+    const elapsed = TIMER_DURATION - seconds
+    return `${(elapsed / TIMER_DURATION) * 360}deg`
   }, [seconds])
+
+  const toggleTimer = () => {
+    if (running) {
+      setRunning(false)
+      writeStoredValue(SECONDS_KEY, seconds)
+      return
+    }
+    if (seconds === 0) {
+      setSeconds(TIMER_DURATION)
+      writeStoredValue(SECONDS_KEY, TIMER_DURATION)
+      setRunning(true)
+      return
+    }
+    setRunning(true)
+  }
+
+  const resetTimer = () => {
+    setRunning(false)
+    setSeconds(TIMER_DURATION)
+    writeStoredValue(SECONDS_KEY, TIMER_DURATION)
+  }
 
   return (
     <div className="dashboard-page saturn-dashboard">
@@ -58,11 +98,11 @@ export function SaturnDashboard() {
             </div>
           </div>
           <div className="timer-actions">
-            <button className="primary-action" type="button" onClick={() => setRunning((current) => !current)}>
+            <button className="primary-action" type="button" onClick={toggleTimer}>
               {running ? <PauseIcon /> : <PlayIcon />}
               {running ? 'PAUSE' : 'START'}
             </button>
-            <button className="secondary-action" type="button" onClick={() => { setRunning(false); setSeconds(25 * 60) }}>
+            <button className="secondary-action" type="button" onClick={resetTimer}>
               <ResetIcon /> RESET
             </button>
           </div>
@@ -72,11 +112,11 @@ export function SaturnDashboard() {
           <GlassPanel className="sessions-panel">
             <div className="section-heading">
               <div><p className="section-kicker">Completed</p><h2>Focus sessions</h2></div>
-              <span className="session-total">3 sessions</span>
+              <span className="session-total">{sessions.length} {sessions.length === 1 ? 'session' : 'sessions'}</span>
             </div>
             <div className="session-list">
-              {focusSessions.map((session) => (
-                <div className="session-row" key={session.label}>
+              {sessions.map((session, index) => (
+                <div className="session-row" key={`${session.label}-${index}`}>
                   <i style={{ background: session.color }} />
                   <span>{session.label}</span>
                   <strong>{session.duration}</strong>

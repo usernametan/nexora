@@ -106,3 +106,40 @@ test('mobile cosmos and dashboard flow', async ({ browser }) => {
   const errors = await verifyMobile(browser)
   expect(errors).toEqual([])
 })
+
+test('dashboard state persists across navigation and reload', async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })
+  const errors = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(`console: ${message.text()}`)
+  })
+  page.on('pageerror', (error) => errors.push(`page: ${error.message}`))
+  await page.goto('/', { waitUntil: 'networkidle' })
+  await page.waitForTimeout(1500)
+
+  const openEarth = async () => {
+    await page.locator('.planet-nav__item', { hasText: 'EARTH' }).click()
+    await page.waitForTimeout(1200)
+  }
+
+  await openEarth()
+  const firstTask = page.locator('.task-row').first()
+  await expect(firstTask).toHaveAttribute('aria-pressed', 'true')
+  await firstTask.click()
+  await expect(firstTask).toHaveAttribute('aria-pressed', 'false')
+
+  await page.locator('.back-button').click()
+  await expect(page.locator('.planet-dashboard')).toHaveCount(0)
+  await page.waitForTimeout(500)
+
+  await openEarth()
+  await expect(page.locator('.task-row').first()).toHaveAttribute('aria-pressed', 'false')
+
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.waitForTimeout(1500)
+  await openEarth()
+  await expect(page.locator('.task-row').first()).toHaveAttribute('aria-pressed', 'false')
+
+  expect(errors).toEqual([])
+  await page.close()
+})

@@ -34,7 +34,7 @@ There is no typecheck or unit-test script. Playwright tests run serially (`worke
 - `src/App.jsx` is the whole app state machine: `activePlanet` (open dashboard), `lockedPlanet` (modal), `hoveredPlanet`, `isClosing`. No URL routing.
 - Planet definitions are the source of truth in `src/data/mockData.js`; `activePlanets`/`lockedPlanets` are derived from `locked`. All dashboard data is mock data there too.
 - Adding a planet requires: entry in `mockData.js`, dashboard mapping in `src/components/dashboards/PlanetDashboard.jsx`, and (for mobile) `mobilePlanetIds` in `CosmosScene.jsx`. The sidebar and 3D scene iterate the data automatically.
-- Dashboards are keyed by planet id and unmounted on exit; per-dashboard state (task checks, focus timer) is local React state and resets on reopen.
+- Dashboards are keyed by planet id and unmounted on exit. Interactive state is persisted to `localStorage` under the `personal-cosmos:*` namespace via `src/hooks/useLocalStorage.js` (Earth task checks, Saturn timer/sessions/ambient, Moon hydration), so it survives navigation and reloads.
 - Planet textures/clouds are generated procedurally at runtime in `src/utils/planetTextures.js` (canvas; cached by texture name). There are no texture image assets to edit.
 - Tailwind content globs are only `index.html` and `src/**/*.{js,jsx}`; custom tokens `cosmos`, `glass`, `boxShadow.glass`, and the Manrope font are in `tailwind.config.js`. Component theming mostly uses CSS variables/classes in `App.css`.
 - `PlanetDashboard` uses GSAP enter/exit; on exit it calls `onExited` to clear `activePlanet`. Don't clear the planet state directly or the exit animation breaks.

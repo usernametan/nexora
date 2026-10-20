@@ -67,7 +67,7 @@ export function PlanetDashboard({ planet, isClosing, reducedMotion, onBack, onEx
           <Dashboard />
           <footer className="dashboard-footer">
             <span>PERSONAL COSMOS</span>
-            <span>LOCAL PROTOTYPE · NO DATA STORED</span>
+            <span>LOCAL PROTOTYPE · SAVED ON THIS DEVICE</span>
           </footer>
         </div>
       </div>
