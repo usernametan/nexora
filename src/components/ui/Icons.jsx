@@ -133,6 +133,16 @@ export function TrashIcon({ size = 14 }) {
   )
 }
 
+export function SettingsIcon({ size = 15 }) {
+  return (
+    <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6 18 18M6 18l1.4-1.4M16.6 7.4 18 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx="12" cy="12" r="6.7" stroke="currentColor" strokeWidth="1.4" strokeDasharray="2.5 4" />
+    </svg>
+  )
+}
+
 export function ExternalLinkIcon({ size = 14 }) {
   return (
     <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none">

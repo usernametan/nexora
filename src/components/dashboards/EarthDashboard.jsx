@@ -1,28 +1,31 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useProfile } from '../../context/profile'
 import { calendarEvents, earthTasks, timeline } from '../../data/mockData'
-import { readStoredValue, useLocalStorage } from '../../hooks/useLocalStorage'
-import { createId } from '../../utils/format'
+import { dailyStorageKey, useCurrentDay, useLocalStorage } from '../../hooks/useLocalStorage'
+import { createId, formatLongDate, formatMonthYear, greetingFor, monthGrid } from '../../utils/format'
 import { CheckIcon, ClockIcon, EditIcon, PlusIcon, TrashIcon } from '../ui/Icons'
 import { GlassPanel } from '../ui/GlassPanel'
-
-const calendarCells = Array.from({ length: 35 }, (_, index) => {
-  const day = index - 1
-  return day > 0 && day <= 30 ? day : null
-})
 
 const emptyDraft = { title: '', meta: '' }
 
 export function EarthDashboard() {
-  const [tasks, setTasks] = useLocalStorage('personal-cosmos:earth-tasks', () => {
-    const previousCompleted = readStoredValue('personal-cosmos:earth-completed', null)
-    if (!Array.isArray(previousCompleted)) return earthTasks
-    return earthTasks.map((task) => ({ ...task, done: previousCompleted.includes(task.id) }))
-  })
+  const { profile } = useProfile()
+  const today = useCurrentDay(profile.timezone)
+  const [now, setNow] = useState(() => new Date())
+  const [tasks, setTasks] = useLocalStorage(dailyStorageKey('personal-cosmos:earth-tasks', today), earthTasks)
   const [draft, setDraft] = useState(emptyDraft)
   const [editingId, setEditingId] = useState(null)
+  const calendarCells = monthGrid(today)
+  const todayDay = Number(today.slice(8, 10))
+  const greeting = greetingFor(now, profile.timezone)
   const safeTasks = Array.isArray(tasks) ? tasks : earthTasks
   const completedCount = safeTasks.filter((task) => task.done).length
   const completion = safeTasks.length ? Math.round((completedCount / safeTasks.length) * 100) : 0
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   const toggleTask = (taskId) => {
     setTasks((current) => (Array.isArray(current) ? current : earthTasks).map((task) => (
@@ -70,8 +73,8 @@ export function EarthDashboard() {
       <header className="dashboard-header">
         <div>
           <p className="eyebrow"><span /> Earth · Daily execution</p>
-          <h1>Good morning, Tan</h1>
-          <p className="dashboard-date">Friday, September 25</p>
+          <h1>{greeting}{profile.name ? `, ${profile.name}` : ''}</h1>
+          <p className="dashboard-date">{formatLongDate(today)}</p>
         </div>
         <div className="day-progress" aria-label={`${completion}% of tasks complete`}>
           <div className="day-progress__value">{completedCount}<span>/{safeTasks.length}</span></div>
@@ -177,7 +180,7 @@ export function EarthDashboard() {
         <GlassPanel className="calendar-panel">
           <div className="section-heading calendar-heading">
             <div>
-              <p className="section-kicker">September 2026</p>
+              <p className="section-kicker">{formatMonthYear(today)}</p>
               <h2>Mission calendar</h2>
             </div>
             <div className="calendar-legend"><span /> Scheduled</div>
@@ -190,7 +193,7 @@ export function EarthDashboard() {
               const event = day ? calendarEvents[day] : null
               return (
                 <div
-                  className={`calendar-day ${day === 25 ? 'is-today' : ''} ${event ? 'has-event' : ''}`}
+                  className={`calendar-day ${day === todayDay ? 'is-today' : ''} ${event ? 'has-event' : ''}`}
                   key={`${day ?? 'blank'}-${index}`}
                 >
                   {day && <span>{day}</span>}

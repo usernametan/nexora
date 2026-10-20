@@ -1,13 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ambientOptions, focusSessions } from '../../data/mockData'
-import { readStoredValue, useLocalStorage, writeStoredValue } from '../../hooks/useLocalStorage'
+import { useProfile } from '../../context/profile'
+import { ambientOptions } from '../../data/mockData'
+import {
+  dailyStorageKey,
+  readStoredValue,
+  useCurrentDay,
+  useLocalStorage,
+  writeStoredValue,
+} from '../../hooks/useLocalStorage'
 import { useAmbientAudio } from '../../hooks/useAmbientAudio'
-import { createId, formatMinutes, isoDay, sessionMinutes, todayIso } from '../../utils/format'
+import { createId, formatMinutes, isoDay, sessionMinutes } from '../../utils/format'
 import { PauseIcon, PlayIcon, ResetIcon } from '../ui/Icons'
 import { GlassPanel } from '../ui/GlassPanel'
 
 const TIMER_DURATION = 25 * 60
 const SECONDS_KEY = 'personal-cosmos:saturn-seconds'
+const SESSIONS_KEY = 'personal-cosmos:saturn-sessions'
 
 const formatTimer = (seconds) => {
   const minutes = Math.floor(seconds / 60)
@@ -16,40 +24,40 @@ const formatTimer = (seconds) => {
 }
 
 export function SaturnDashboard() {
+  const { profile } = useProfile()
+  const today = useCurrentDay(profile.timezone)
   const [seconds, setSeconds] = useState(() => {
     const stored = readStoredValue(SECONDS_KEY, TIMER_DURATION)
     if (typeof stored !== 'number' || !Number.isFinite(stored)) return TIMER_DURATION
     return Math.min(TIMER_DURATION, Math.max(0, stored))
   })
-  const [sessions, setSessions] = useLocalStorage('personal-cosmos:saturn-sessions', focusSessions)
+  const [sessions, setSessions] = useLocalStorage(dailyStorageKey(SESSIONS_KEY, today), [])
   const [ambient, setAmbient] = useLocalStorage('personal-cosmos:saturn-ambient', 'space')
   const [audioEnabled, setAudioEnabled] = useState(false)
   const [running, setRunning] = useState(false)
   const secondsRef = useRef(seconds)
   useAmbientAudio(ambient, audioEnabled)
 
-  const safeSessions = Array.isArray(sessions) ? sessions : focusSessions
-  const today = todayIso()
-  const todayMinutes = safeSessions
-    .filter((session) => session.date === today)
+  const safeSessions = useMemo(() => (Array.isArray(sessions) ? sessions : []), [sessions])
+  const sessionsFor = (date) => (
+    date === today ? safeSessions : readStoredValue(dailyStorageKey(SESSIONS_KEY, date), [])
+  )
+  const todayMinutes = safeSessions.reduce((total, session) => total + sessionMinutes(session), 0)
+  const yesterdayMinutes = sessionsFor(isoDay(1, profile.timezone))
     .reduce((total, session) => total + sessionMinutes(session), 0)
-  const yesterdayMinutes = safeSessions
-    .filter((session) => session.date === isoDay(1))
-    .reduce((total, session) => total + sessionMinutes(session), 0)
-  const todaySessionCount = safeSessions.filter((session) => session.date === today).length
+  const todaySessionCount = safeSessions.length
   const delta = yesterdayMinutes > 0 ? Math.round(((todayMinutes - yesterdayMinutes) / yesterdayMinutes) * 100) : null
 
   const weekly = useMemo(() => Array.from({ length: 7 }, (_, index) => {
-    const date = isoDay(6 - index)
-    const minutes = safeSessions
-      .filter((session) => session.date === date)
+    const date = isoDay(6 - index, profile.timezone)
+    const minutes = (date === today ? safeSessions : readStoredValue(dailyStorageKey(SESSIONS_KEY, date), []))
       .reduce((total, session) => total + sessionMinutes(session), 0)
     return {
       date,
       day: new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { weekday: 'narrow' }),
       minutes,
     }
-  }), [safeSessions])
+  }), [profile.timezone, safeSessions, today])
   const weekTotal = weekly.reduce((total, day) => total + day.minutes, 0)
   const maxDay = Math.max(1, ...weekly.map((day) => day.minutes))
 
@@ -78,9 +86,9 @@ export function SaturnDashboard() {
       label: 'Focus',
       minutes: 25,
       color: '#d9ab72',
-      date: todayIso(),
+      date: today,
     }])
-  }, [running, seconds, setSessions])
+  }, [running, seconds, setSessions, today])
 
   const timerProgress = useMemo(() => {
     const elapsed = TIMER_DURATION - seconds

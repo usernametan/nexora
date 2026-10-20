@@ -1,7 +1,8 @@
 import { useState } from 'react'
+import { useProfile } from '../../context/profile'
 import { neptuneBookmarks } from '../../data/mockData'
 import { useLocalStorage } from '../../hooks/useLocalStorage'
-import { createId, formatShortDate, hostFromUrl } from '../../utils/format'
+import { createId, formatShortDate, hostFromUrl, todayIso } from '../../utils/format'
 import { CheckIcon, EditIcon, ExternalLinkIcon, PlusIcon, SearchIcon, TrashIcon } from '../ui/Icons'
 import { GlassPanel } from '../ui/GlassPanel'
 
@@ -23,6 +24,7 @@ const parseTags = (value) => [...new Set(
 )].slice(0, 6)
 
 export function NeptuneDashboard() {
+  const { profile } = useProfile()
   const [bookmarks, setBookmarks] = useLocalStorage('personal-cosmos:neptune-bookmarks', neptuneBookmarks)
   const [draft, setDraft] = useState(emptyDraft)
   const [editingId, setEditingId] = useState(null)
@@ -72,7 +74,7 @@ export function NeptuneDashboard() {
       setBookmarks((current) => [...(Array.isArray(current) ? current : neptuneBookmarks), {
         id: createId('bookmark'),
         ...nextBookmark,
-        added: new Date().toISOString().slice(0, 10),
+        added: todayIso(profile.timezone),
       }])
     }
     cancelEdit()

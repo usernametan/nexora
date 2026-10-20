@@ -1,11 +1,12 @@
 import { useState } from 'react'
+import { useProfile } from '../../context/profile'
 import { jupiterBudget, jupiterCategories, jupiterExpenses } from '../../data/mockData'
-import { useLocalStorage } from '../../hooks/useLocalStorage'
+import { useCurrentDay, useLocalStorage } from '../../hooks/useLocalStorage'
 import { createId, formatMoney, formatShortDate, todayIso } from '../../utils/format'
 import { CheckIcon, EditIcon, PlusIcon, TrashIcon } from '../ui/Icons'
 import { GlassPanel } from '../ui/GlassPanel'
 
-const emptyDraft = () => ({ title: '', amount: '', category: 'food', date: todayIso() })
+const emptyDraft = (date = todayIso()) => ({ title: '', amount: '', category: 'food', date })
 
 const categoryFor = (id) => jupiterCategories.find((category) => category.id === id) ?? {
   id: 'other',
@@ -14,11 +15,13 @@ const categoryFor = (id) => jupiterCategories.find((category) => category.id ===
 }
 
 export function JupiterDashboard() {
+  const { profile } = useProfile()
+  const today = useCurrentDay(profile.timezone)
   const [expenses, setExpenses] = useLocalStorage('personal-cosmos:jupiter-expenses', jupiterExpenses)
-  const [draft, setDraft] = useState(emptyDraft)
+  const [draft, setDraft] = useState(() => emptyDraft(today))
   const [editingId, setEditingId] = useState(null)
   const safeExpenses = Array.isArray(expenses) ? expenses : jupiterExpenses
-  const month = todayIso().slice(0, 7)
+  const month = today.slice(0, 7)
   const monthExpenses = safeExpenses.filter((expense) => String(expense.date).startsWith(month))
   const total = monthExpenses.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0)
   const remaining = jupiterBudget - total
@@ -44,7 +47,7 @@ export function JupiterDashboard() {
 
   const cancelEdit = () => {
     setEditingId(null)
-    setDraft(emptyDraft())
+    setDraft(emptyDraft(today))
   }
 
   const submitExpense = (event) => {
@@ -55,7 +58,7 @@ export function JupiterDashboard() {
       title,
       amount: Math.round(amountValue * 100) / 100,
       category: draft.category,
-      date: draft.date || todayIso(),
+      date: draft.date || today,
     }
     if (editingId) {
       setExpenses((current) => (Array.isArray(current) ? current : jupiterExpenses).map((expense) => (
@@ -112,7 +115,7 @@ export function JupiterDashboard() {
             </div>
             <div>
               <span>Daily average</span>
-              <strong>{formatMoney(total / Math.max(1, new Date().getDate()))}</strong>
+              <strong>{formatMoney(total / Math.max(1, Number(today.slice(8, 10))))}</strong>
             </div>
           </div>
           <div className="category-breakdown">
