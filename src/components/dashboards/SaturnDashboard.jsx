@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ambientOptions, focusSessions, weeklyFocus } from '../../data/mockData'
+import { ambientOptions, focusSessions } from '../../data/mockData'
 import { readStoredValue, useLocalStorage, writeStoredValue } from '../../hooks/useLocalStorage'
-import { PauseIcon, PlayIcon, ResetIcon, SparkIcon } from '../ui/Icons'
+import { useAmbientAudio } from '../../hooks/useAmbientAudio'
+import { createId, formatMinutes, isoDay, sessionMinutes, todayIso } from '../../utils/format'
+import { PauseIcon, PlayIcon, ResetIcon } from '../ui/Icons'
 import { GlassPanel } from '../ui/GlassPanel'
 
 const TIMER_DURATION = 25 * 60
@@ -21,8 +23,35 @@ export function SaturnDashboard() {
   })
   const [sessions, setSessions] = useLocalStorage('personal-cosmos:saturn-sessions', focusSessions)
   const [ambient, setAmbient] = useLocalStorage('personal-cosmos:saturn-ambient', 'space')
+  const [audioEnabled, setAudioEnabled] = useState(false)
   const [running, setRunning] = useState(false)
   const secondsRef = useRef(seconds)
+  useAmbientAudio(ambient, audioEnabled)
+
+  const safeSessions = Array.isArray(sessions) ? sessions : focusSessions
+  const today = todayIso()
+  const todayMinutes = safeSessions
+    .filter((session) => session.date === today)
+    .reduce((total, session) => total + sessionMinutes(session), 0)
+  const yesterdayMinutes = safeSessions
+    .filter((session) => session.date === isoDay(1))
+    .reduce((total, session) => total + sessionMinutes(session), 0)
+  const todaySessionCount = safeSessions.filter((session) => session.date === today).length
+  const delta = yesterdayMinutes > 0 ? Math.round(((todayMinutes - yesterdayMinutes) / yesterdayMinutes) * 100) : null
+
+  const weekly = useMemo(() => Array.from({ length: 7 }, (_, index) => {
+    const date = isoDay(6 - index)
+    const minutes = safeSessions
+      .filter((session) => session.date === date)
+      .reduce((total, session) => total + sessionMinutes(session), 0)
+    return {
+      date,
+      day: new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { weekday: 'narrow' }),
+      minutes,
+    }
+  }), [safeSessions])
+  const weekTotal = weekly.reduce((total, day) => total + day.minutes, 0)
+  const maxDay = Math.max(1, ...weekly.map((day) => day.minutes))
 
   useEffect(() => {
     secondsRef.current = seconds
@@ -44,7 +73,13 @@ export function SaturnDashboard() {
     if (!running || seconds > 0) return
     setRunning(false)
     writeStoredValue(SECONDS_KEY, 0)
-    setSessions((current) => [...current, { label: 'Focus', duration: '25m', color: '#d9ab72' }])
+    setSessions((current) => [...(Array.isArray(current) ? current : []), {
+      id: createId('focus'),
+      label: 'Focus',
+      minutes: 25,
+      color: '#d9ab72',
+      date: todayIso(),
+    }])
   }, [running, seconds, setSessions])
 
   const timerProgress = useMemo(() => {
@@ -73,6 +108,11 @@ export function SaturnDashboard() {
     writeStoredValue(SECONDS_KEY, TIMER_DURATION)
   }
 
+  const chooseAmbient = (optionId) => {
+    setAmbient(optionId)
+    setAudioEnabled(true)
+  }
+
   return (
     <div className="dashboard-page saturn-dashboard">
       <header className="dashboard-header">
@@ -83,8 +123,12 @@ export function SaturnDashboard() {
         </div>
         <div className="today-focus">
           <span>Today’s focus</span>
-          <strong>3h 24m</strong>
-          <small>+18% from yesterday</small>
+          <strong>{formatMinutes(todayMinutes)}</strong>
+          <small>
+            {delta === null
+              ? `${todaySessionCount} ${todaySessionCount === 1 ? 'session' : 'sessions'} logged`
+              : `${delta >= 0 ? '+' : ''}${delta}% from yesterday`}
+          </small>
         </div>
       </header>
 
@@ -112,24 +156,33 @@ export function SaturnDashboard() {
           <GlassPanel className="sessions-panel">
             <div className="section-heading">
               <div><p className="section-kicker">Completed</p><h2>Focus sessions</h2></div>
-              <span className="session-total">{sessions.length} {sessions.length === 1 ? 'session' : 'sessions'}</span>
+              <span className="session-total">{safeSessions.length} {safeSessions.length === 1 ? 'session' : 'sessions'}</span>
             </div>
             <div className="session-list">
-              {sessions.map((session, index) => (
-                <div className="session-row" key={`${session.label}-${index}`}>
+              {safeSessions.slice(-6).reverse().map((session, index) => (
+                <div className="session-row" key={session.id ?? `${session.label}-${index}`}>
                   <i style={{ background: session.color }} />
                   <span>{session.label}</span>
-                  <strong>{session.duration}</strong>
-                  <small>Complete</small>
+                  <strong>{formatMinutes(sessionMinutes(session))}</strong>
+                  <small>{session.date ? new Date(`${session.date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Complete'}</small>
                 </div>
               ))}
+              {safeSessions.length === 0 && <p className="empty-state">No sessions logged yet. Start the timer above.</p>}
             </div>
           </GlassPanel>
 
           <GlassPanel className="ambient-panel">
             <div className="section-heading">
               <div><p className="section-kicker">Sound environment</p><h2>Ambient space</h2></div>
-              <SparkIcon />
+              <button
+                className={`ambient-power ${audioEnabled ? 'is-on' : ''}`}
+                type="button"
+                onClick={() => setAudioEnabled((current) => !current)}
+                aria-pressed={audioEnabled}
+              >
+                {audioEnabled ? <PauseIcon size={12} /> : <PlayIcon size={12} />}
+                {audioEnabled ? 'MUTE' : 'SOUND ON'}
+              </button>
             </div>
             <div className="ambient-list">
               {ambientOptions.map((option) => (
@@ -137,7 +190,7 @@ export function SaturnDashboard() {
                   className={ambient === option.id ? 'is-active' : ''}
                   type="button"
                   key={option.id}
-                  onClick={() => setAmbient(option.id)}
+                  onClick={() => chooseAmbient(option.id)}
                   aria-pressed={ambient === option.id}
                 >
                   <span className="ambient-pulse"><i /><i /><i /></span>
@@ -146,7 +199,11 @@ export function SaturnDashboard() {
                 </button>
               ))}
             </div>
-            <p className="prototype-note">Audio is represented visually only in this prototype.</p>
+            <p className="prototype-note">
+              {audioEnabled
+                ? 'Sound is synthesized locally in your browser. Keep the volume low.'
+                : 'Audio is off. Choose a sound or turn sound on.'}
+            </p>
           </GlassPanel>
         </div>
       </div>
@@ -154,13 +211,13 @@ export function SaturnDashboard() {
       <GlassPanel className="weekly-panel">
         <div className="section-heading">
           <div><p className="section-kicker">Last 7 days</p><h2>Weekly study orbit</h2></div>
-          <div className="weekly-total"><strong>21.9h</strong><span>Total focus</span></div>
+          <div className="weekly-total"><strong>{formatMinutes(weekTotal)}</strong><span>Total focus</span></div>
         </div>
         <div className="focus-chart">
-          {weeklyFocus.map((item, index) => (
-            <div className="focus-bar" key={`${item.day}-${index}`}>
-              <div className="focus-bar__track"><span style={{ height: `${(item.hours / 5.5) * 100}%` }} /></div>
-              <strong>{item.hours}h</strong>
+          {weekly.map((item) => (
+            <div className="focus-bar" key={item.date}>
+              <div className="focus-bar__track"><span style={{ height: `${(item.minutes / maxDay) * 100}%` }} /></div>
+              <strong>{formatMinutes(item.minutes)}</strong>
               <small>{item.day}</small>
             </div>
           ))}

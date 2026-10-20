@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { calendarEvents, earthTasks, timeline } from '../../data/mockData'
-import { useLocalStorage } from '../../hooks/useLocalStorage'
-import { CheckIcon, ClockIcon } from '../ui/Icons'
+import { readStoredValue, useLocalStorage } from '../../hooks/useLocalStorage'
+import { createId } from '../../utils/format'
+import { CheckIcon, ClockIcon, EditIcon, PlusIcon, TrashIcon } from '../ui/Icons'
 import { GlassPanel } from '../ui/GlassPanel'
 
 const calendarCells = Array.from({ length: 35 }, (_, index) => {
@@ -8,21 +10,59 @@ const calendarCells = Array.from({ length: 35 }, (_, index) => {
   return day > 0 && day <= 30 ? day : null
 })
 
+const emptyDraft = { title: '', meta: '' }
+
 export function EarthDashboard() {
-  const [completedIds, setCompletedIds] = useLocalStorage(
-    'personal-cosmos:earth-completed',
-    () => earthTasks.filter((task) => task.done).map((task) => task.id),
-  )
-  const completed = new Set(Array.isArray(completedIds) ? completedIds : [])
-  const completion = Math.round((completed.size / earthTasks.length) * 100)
+  const [tasks, setTasks] = useLocalStorage('personal-cosmos:earth-tasks', () => {
+    const previousCompleted = readStoredValue('personal-cosmos:earth-completed', null)
+    if (!Array.isArray(previousCompleted)) return earthTasks
+    return earthTasks.map((task) => ({ ...task, done: previousCompleted.includes(task.id) }))
+  })
+  const [draft, setDraft] = useState(emptyDraft)
+  const [editingId, setEditingId] = useState(null)
+  const safeTasks = Array.isArray(tasks) ? tasks : earthTasks
+  const completedCount = safeTasks.filter((task) => task.done).length
+  const completion = safeTasks.length ? Math.round((completedCount / safeTasks.length) * 100) : 0
 
   const toggleTask = (taskId) => {
-    setCompletedIds((current) => {
-      const safeCurrent = Array.isArray(current) ? current : []
-      return safeCurrent.includes(taskId)
-        ? safeCurrent.filter((id) => id !== taskId)
-        : [...safeCurrent, taskId]
-    })
+    setTasks((current) => (Array.isArray(current) ? current : earthTasks).map((task) => (
+      task.id === taskId ? { ...task, done: !task.done } : task
+    )))
+  }
+
+  const startEdit = (task) => {
+    setEditingId(task.id)
+    setDraft({ title: task.title, meta: task.meta ?? '' })
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setDraft(emptyDraft)
+  }
+
+  const submitTask = (event) => {
+    event.preventDefault()
+    const title = draft.title.trim()
+    if (!title) return
+    const meta = draft.meta.trim() || 'Personal · No estimate'
+    if (editingId) {
+      setTasks((current) => (Array.isArray(current) ? current : earthTasks).map((task) => (
+        task.id === editingId ? { ...task, title, meta } : task
+      )))
+    } else {
+      setTasks((current) => [...(Array.isArray(current) ? current : earthTasks), {
+        id: createId('task'),
+        title,
+        meta,
+        done: false,
+      }])
+    }
+    cancelEdit()
+  }
+
+  const removeTask = (taskId) => {
+    setTasks((current) => (Array.isArray(current) ? current : earthTasks).filter((task) => task.id !== taskId))
+    if (editingId === taskId) cancelEdit()
   }
 
   return (
@@ -34,7 +74,7 @@ export function EarthDashboard() {
           <p className="dashboard-date">Friday, September 25</p>
         </div>
         <div className="day-progress" aria-label={`${completion}% of tasks complete`}>
-          <div className="day-progress__value">{completed.size}<span>/{earthTasks.length}</span></div>
+          <div className="day-progress__value">{completedCount}<span>/{safeTasks.length}</span></div>
           <div className="day-progress__track"><span style={{ width: `${completion}%` }} /></div>
           <small>Daily momentum</small>
         </div>
@@ -47,28 +87,68 @@ export function EarthDashboard() {
               <p className="section-kicker">Priority signal</p>
               <h2>Must do today</h2>
             </div>
-            <span className="section-count">{completed.size} complete</span>
+            <span className="section-count">{completedCount} complete</span>
           </div>
+
+          <form className={`item-form task-composer ${editingId ? 'is-editing' : ''}`} onSubmit={submitTask}>
+            <div className="field-row">
+              <input
+                className="field-input"
+                type="text"
+                value={draft.title}
+                onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
+                placeholder={editingId ? 'Edit task title' : 'Add a task'}
+                aria-label="Task title"
+              />
+              <button className="mini-action" type="submit" disabled={!draft.title.trim()}>
+                {editingId ? <CheckIcon /> : <PlusIcon />}
+                {editingId ? 'Save' : 'Add'}
+              </button>
+            </div>
+            <div className="field-row">
+              <input
+                className="field-input field-input--quiet"
+                type="text"
+                value={draft.meta}
+                onChange={(event) => setDraft((current) => ({ ...current, meta: event.target.value }))}
+                placeholder="Category · estimate (optional)"
+                aria-label="Task detail"
+              />
+              {editingId && (
+                <button className="text-action" type="button" onClick={cancelEdit}>Cancel</button>
+              )}
+            </div>
+          </form>
+
           <div className="task-list">
-            {earthTasks.map((task) => {
-              const isDone = completed.has(task.id)
+            {safeTasks.map((task) => {
+              const isDone = Boolean(task.done)
               return (
-                <button
-                  className={`task-row ${isDone ? 'is-complete' : ''}`}
-                  type="button"
-                  key={task.id}
-                  onClick={() => toggleTask(task.id)}
-                  aria-pressed={isDone}
-                >
-                  <span className="task-check"><CheckIcon /></span>
-                  <span className="task-copy">
-                    <strong>{task.title}</strong>
-                    <small>{task.meta}</small>
-                  </span>
-                  <span className="task-orbit" />
-                </button>
+                <div className={`task-row ${isDone ? 'is-complete' : ''}`} key={task.id}>
+                  <button
+                    className="task-toggle"
+                    type="button"
+                    onClick={() => toggleTask(task.id)}
+                    aria-pressed={isDone}
+                  >
+                    <span className="task-check"><CheckIcon /></span>
+                    <span className="task-copy">
+                      <strong>{task.title}</strong>
+                      <small>{task.meta}</small>
+                    </span>
+                  </button>
+                  <div className="row-actions">
+                    <button className="icon-action" type="button" onClick={() => startEdit(task)} aria-label={`Edit ${task.title}`}>
+                      <EditIcon />
+                    </button>
+                    <button className="icon-action icon-action--danger" type="button" onClick={() => removeTask(task.id)} aria-label={`Delete ${task.title}`}>
+                      <TrashIcon />
+                    </button>
+                  </div>
+                </div>
               )
             })}
+            {safeTasks.length === 0 && <p className="empty-state">No tasks yet. Capture the next small step above.</p>}
           </div>
         </GlassPanel>
 

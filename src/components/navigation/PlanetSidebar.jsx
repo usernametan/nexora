@@ -45,26 +45,30 @@ export function PlanetSidebar({ activePlanet, onSelect, onHome }) {
           })}
         </div>
 
-        <div className="planet-nav__divider"><span>Future orbits</span></div>
+        {lockedPlanets.length > 0 && (
+          <>
+            <div className="planet-nav__divider"><span>Future orbits</span></div>
 
-        <div className="planet-nav__group is-locked">
-          {lockedPlanets.map((planet) => (
-            <button
-              className="planet-nav__item is-locked"
-              type="button"
-              key={planet.id}
-              onClick={() => onSelect(planet)}
-              style={{ '--planet-color': planet.color }}
-            >
-              <PlanetGlyph planet={planet} />
-              <span className="planet-nav__copy">
-                <strong>{planet.name}</strong>
-                <small>{planet.module}</small>
-              </span>
-              <LockIcon size={12} />
-            </button>
-          ))}
-        </div>
+            <div className="planet-nav__group is-locked">
+              {lockedPlanets.map((planet) => (
+                <button
+                  className="planet-nav__item is-locked"
+                  type="button"
+                  key={planet.id}
+                  onClick={() => onSelect(planet)}
+                  style={{ '--planet-color': planet.color }}
+                >
+                  <PlanetGlyph planet={planet} />
+                  <span className="planet-nav__copy">
+                    <strong>{planet.name}</strong>
+                    <small>{planet.module}</small>
+                  </span>
+                  <LockIcon size={12} />
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </nav>
 
       <div className="sidebar-system">

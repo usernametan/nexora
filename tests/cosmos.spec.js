@@ -50,6 +50,9 @@ async function verifyDesktop(browser) {
     ['MOON', 'A quieter kind of progress'],
     ['MARS', 'What you know,'],
     ['SATURN', 'Make space for focus'],
+    ['MERCURY', 'Small things,'],
+    ['JUPITER', 'Money, in'],
+    ['NEPTUNE', 'Ideas worth'],
   ]
 
   for (const [buttonName, heading] of dashboards) {
@@ -60,14 +63,6 @@ async function verifyDesktop(browser) {
     await page.locator('.back-button').click()
     await expect(page.locator('.planet-dashboard')).toHaveCount(0)
     await page.waitForTimeout(500)
-  }
-
-  for (const planet of ['MERCURY', 'JUPITER', 'NEPTUNE']) {
-    await page.locator('.planet-nav__item', { hasText: planet }).click()
-    await expect(page.getByRole('dialog')).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Coming soon' })).toBeVisible()
-    await page.locator('.locked-close').click()
-    await expect(page.getByRole('dialog')).toHaveCount(0)
   }
 
   expect(errors).toEqual([])
@@ -123,7 +118,7 @@ test('dashboard state persists across navigation and reload', async ({ browser }
   }
 
   await openEarth()
-  const firstTask = page.locator('.task-row').first()
+  const firstTask = page.locator('.task-toggle').first()
   await expect(firstTask).toHaveAttribute('aria-pressed', 'true')
   await firstTask.click()
   await expect(firstTask).toHaveAttribute('aria-pressed', 'false')
@@ -133,12 +128,79 @@ test('dashboard state persists across navigation and reload', async ({ browser }
   await page.waitForTimeout(500)
 
   await openEarth()
-  await expect(page.locator('.task-row').first()).toHaveAttribute('aria-pressed', 'false')
+  await expect(page.locator('.task-toggle').first()).toHaveAttribute('aria-pressed', 'false')
 
   await page.reload({ waitUntil: 'networkidle' })
   await page.waitForTimeout(1500)
   await openEarth()
-  await expect(page.locator('.task-row').first()).toHaveAttribute('aria-pressed', 'false')
+  await expect(page.locator('.task-toggle').first()).toHaveAttribute('aria-pressed', 'false')
+
+  expect(errors).toEqual([])
+  await page.close()
+})
+
+test('quick tools create, edit, and delete records', async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })
+  const errors = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(`console: ${message.text()}`)
+  })
+  page.on('pageerror', (error) => errors.push(`page: ${error.message}`))
+  await page.goto('/', { waitUntil: 'networkidle' })
+  await page.waitForTimeout(1500)
+
+  const openPlanet = async (name) => {
+    await page.locator('.planet-nav__item', { hasText: name }).click()
+    await page.waitForTimeout(1200)
+  }
+
+  const closePlanet = async () => {
+    await page.locator('.back-button').click()
+    await expect(page.locator('.planet-dashboard')).toHaveCount(0)
+    await page.waitForTimeout(500)
+  }
+
+  await openPlanet('EARTH')
+  await page.getByLabel('Task title').fill('Review the orbit notes')
+  await page.locator('.task-composer .mini-action').click()
+  const newTask = page.locator('.task-row', { hasText: 'Review the orbit notes' })
+  await expect(newTask).toBeVisible()
+  await page.getByRole('button', { name: 'Edit Review the orbit notes' }).click()
+  await page.getByLabel('Task title').fill('Review the edited orbit notes')
+  await page.locator('.task-composer .mini-action').click()
+  await expect(page.locator('.task-row', { hasText: 'Review the edited orbit notes' })).toBeVisible()
+  await page.getByRole('button', { name: 'Delete Review the edited orbit notes' }).click()
+  await expect(page.locator('.task-row', { hasText: 'Review the edited orbit notes' })).toHaveCount(0)
+  await closePlanet()
+
+  await openPlanet('MERCURY')
+  await page.getByLabel('Item title').fill('Buy stamps')
+  await page.getByLabel('Item detail').fill('Post office on the corner')
+  await page.getByRole('button', { name: 'CAPTURE' }).click()
+  await expect(page.locator('.mercury-row', { hasText: 'Buy stamps' })).toBeVisible()
+  await page.getByRole('button', { name: 'Delete Buy stamps' }).click()
+  await expect(page.locator('.mercury-row', { hasText: 'Buy stamps' })).toHaveCount(0)
+  await closePlanet()
+
+  await openPlanet('JUPITER')
+  await page.getByLabel('Expense title').fill('Notebook refill')
+  await page.getByLabel('Expense amount').fill('12.50')
+  await page.getByRole('button', { name: 'LOG EXPENSE' }).click()
+  await expect(page.locator('.expense-row', { hasText: 'Notebook refill' })).toBeVisible()
+  await page.getByRole('button', { name: 'Delete Notebook refill' }).click()
+  await expect(page.locator('.expense-row', { hasText: 'Notebook refill' })).toHaveCount(0)
+  await closePlanet()
+
+  await openPlanet('NEPTUNE')
+  await page.getByLabel('Bookmark title').fill('Playwright docs')
+  await page.getByLabel('Bookmark URL').fill('playwright.dev')
+  await page.getByLabel('Bookmark tags').fill('testing, reference')
+  await page.getByRole('button', { name: 'SAVE LINK' }).click()
+  const bookmark = page.locator('.bookmark-card', { hasText: 'Playwright docs' })
+  await expect(bookmark).toBeVisible()
+  await expect(bookmark.getByText('playwright.dev')).toBeVisible()
+  await page.getByRole('button', { name: 'Delete Playwright docs' }).click()
+  await expect(page.locator('.bookmark-card', { hasText: 'Playwright docs' })).toHaveCount(0)
 
   expect(errors).toEqual([])
   await page.close()
