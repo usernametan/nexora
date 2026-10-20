@@ -109,6 +109,11 @@ test('mobile cosmos and dashboard flow', async ({ browser }) => {
 
 test('dashboard state persists across navigation and reload', async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })
+  const errors = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(`console: ${message.text()}`)
+  })
+  page.on('pageerror', (error) => errors.push(`page: ${error.message}`))
   await page.goto('/', { waitUntil: 'networkidle' })
   await page.waitForTimeout(1500)
 
@@ -135,5 +140,6 @@ test('dashboard state persists across navigation and reload', async ({ browser }
   await openEarth()
   await expect(page.locator('.task-row').first()).toHaveAttribute('aria-pressed', 'false')
 
+  expect(errors).toEqual([])
   await page.close()
 })

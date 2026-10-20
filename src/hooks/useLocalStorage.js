@@ -4,7 +4,7 @@ function resolveInitial(initialValue) {
   return typeof initialValue === 'function' ? initialValue() : initialValue
 }
 
-function readStoredValue(key, fallback) {
+export function readStoredValue(key, fallback) {
   if (typeof window === 'undefined') return fallback
   try {
     const raw = window.localStorage.getItem(key)
@@ -16,15 +16,20 @@ function readStoredValue(key, fallback) {
   }
 }
 
+export function writeStoredValue(key, value) {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // Storage may be unavailable (private mode or quota); keep state in memory.
+  }
+}
+
 export function useLocalStorage(key, initialValue) {
   const [value, setValue] = useState(() => readStoredValue(key, resolveInitial(initialValue)))
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(key, JSON.stringify(value))
-    } catch {
-      // Storage may be unavailable (private mode or quota); keep state in memory.
-    }
+    writeStoredValue(key, value)
   }, [key, value])
 
   return [value, setValue]

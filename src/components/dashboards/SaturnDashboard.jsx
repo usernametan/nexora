@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ambientOptions, focusSessions, weeklyFocus } from '../../data/mockData'
-import { useLocalStorage } from '../../hooks/useLocalStorage'
+import { readStoredValue, useLocalStorage, writeStoredValue } from '../../hooks/useLocalStorage'
 import { PauseIcon, PlayIcon, ResetIcon, SparkIcon } from '../ui/Icons'
 import { GlassPanel } from '../ui/GlassPanel'
 
 const TIMER_DURATION = 25 * 60
+const SECONDS_KEY = 'personal-cosmos:saturn-seconds'
 
 const formatTimer = (seconds) => {
   const minutes = Math.floor(seconds / 60)
@@ -13,10 +14,23 @@ const formatTimer = (seconds) => {
 }
 
 export function SaturnDashboard() {
-  const [seconds, setSeconds] = useLocalStorage('personal-cosmos:saturn-seconds', TIMER_DURATION)
+  const [seconds, setSeconds] = useState(() => {
+    const stored = readStoredValue(SECONDS_KEY, TIMER_DURATION)
+    if (typeof stored !== 'number' || !Number.isFinite(stored)) return TIMER_DURATION
+    return Math.min(TIMER_DURATION, Math.max(0, stored))
+  })
   const [sessions, setSessions] = useLocalStorage('personal-cosmos:saturn-sessions', focusSessions)
   const [ambient, setAmbient] = useLocalStorage('personal-cosmos:saturn-ambient', 'space')
   const [running, setRunning] = useState(false)
+  const secondsRef = useRef(seconds)
+
+  useEffect(() => {
+    secondsRef.current = seconds
+  }, [seconds])
+
+  useEffect(() => () => {
+    writeStoredValue(SECONDS_KEY, secondsRef.current)
+  }, [])
 
   useEffect(() => {
     if (!running) return undefined
@@ -24,11 +38,12 @@ export function SaturnDashboard() {
       setSeconds((current) => Math.max(0, current - 1))
     }, 1000)
     return () => window.clearInterval(timer)
-  }, [running, setSeconds])
+  }, [running])
 
   useEffect(() => {
     if (!running || seconds > 0) return
     setRunning(false)
+    writeStoredValue(SECONDS_KEY, 0)
     setSessions((current) => [...current, { label: 'Focus', duration: '25m', color: '#d9ab72' }])
   }, [running, seconds, setSessions])
 
@@ -38,12 +53,24 @@ export function SaturnDashboard() {
   }, [seconds])
 
   const toggleTimer = () => {
-    if (!running && seconds === 0) {
+    if (running) {
+      setRunning(false)
+      writeStoredValue(SECONDS_KEY, seconds)
+      return
+    }
+    if (seconds === 0) {
       setSeconds(TIMER_DURATION)
+      writeStoredValue(SECONDS_KEY, TIMER_DURATION)
       setRunning(true)
       return
     }
-    setRunning((current) => !current)
+    setRunning(true)
+  }
+
+  const resetTimer = () => {
+    setRunning(false)
+    setSeconds(TIMER_DURATION)
+    writeStoredValue(SECONDS_KEY, TIMER_DURATION)
   }
 
   return (
@@ -75,7 +102,7 @@ export function SaturnDashboard() {
               {running ? <PauseIcon /> : <PlayIcon />}
               {running ? 'PAUSE' : 'START'}
             </button>
-            <button className="secondary-action" type="button" onClick={() => { setRunning(false); setSeconds(TIMER_DURATION) }}>
+            <button className="secondary-action" type="button" onClick={resetTimer}>
               <ResetIcon /> RESET
             </button>
           </div>

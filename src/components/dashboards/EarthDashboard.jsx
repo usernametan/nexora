@@ -13,15 +13,16 @@ export function EarthDashboard() {
     'personal-cosmos:earth-completed',
     () => earthTasks.filter((task) => task.done).map((task) => task.id),
   )
-  const completed = new Set(completedIds)
+  const completed = new Set(Array.isArray(completedIds) ? completedIds : [])
   const completion = Math.round((completed.size / earthTasks.length) * 100)
 
   const toggleTask = (taskId) => {
-    setCompletedIds((current) => (
-      current.includes(taskId)
-        ? current.filter((id) => id !== taskId)
-        : [...current, taskId]
-    ))
+    setCompletedIds((current) => {
+      const safeCurrent = Array.isArray(current) ? current : []
+      return safeCurrent.includes(taskId)
+        ? safeCurrent.filter((id) => id !== taskId)
+        : [...safeCurrent, taskId]
+    })
   }
 
   return (
