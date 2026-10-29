@@ -14,6 +14,7 @@ dist-ssr
 
 # Java backend build output and uploaded files
 server/target
+data/
 server/data
 
 # Editor directories and files

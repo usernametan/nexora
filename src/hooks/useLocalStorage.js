@@ -68,6 +68,16 @@ export function useLocalStorage(key, initialValue, options = {}) {
   }, [key])
 
   useEffect(() => {
+    setEntry((current) => {
+      if (current.key === key) return current
+      return {
+        key,
+        value: readStoredValue(key, resolveInitial(initialRef.current), optionsRef.current),
+      }
+    })
+  }, [key])
+
+  useEffect(() => {
     if (skipWriteRef.current) {
       // Remote values are already persisted (with the server timestamp) by applyRemoteValue.
       skipWriteRef.current = false
