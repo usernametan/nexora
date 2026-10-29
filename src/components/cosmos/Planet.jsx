@@ -4,7 +4,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { getCloudTexture, getPlanetTexture } from '../../utils/planetTextures'
 
-export function Planet({ planet, focusRef, focused, dimmed, reducedMotion, onSelect, onHover }) {
+export function Planet({ planet, focusRef, focused, dimmed, mobile, reducedMotion, onSelect, onHover }) {
   const visualRef = useRef(null)
   const bodyRef = useRef(null)
   const cloudRef = useRef(null)
@@ -14,6 +14,7 @@ export function Planet({ planet, focusRef, focused, dimmed, reducedMotion, onSel
   const ringMaterialRef = useRef(null)
   const [hovered, setHovered] = useState(false)
   const hoverAmount = useRef(0)
+  const hitScale = Math.max(planet.id === 'saturn' ? 2.15 : 1.5, 0.22 / planet.radius)
 
   useFrame((_, delta) => {
     const focus = focusRef.current.value
@@ -21,24 +22,25 @@ export function Planet({ planet, focusRef, focused, dimmed, reducedMotion, onSel
     hoverAmount.current = THREE.MathUtils.damp(hoverAmount.current, targetHover, 8, delta)
 
     if (visualRef.current) {
-      const scale = 1 + focus * 2.45 + hoverAmount.current * 0.1
-      visualRef.current.scale.setScalar(scale)
+      const baseFocusRadius = planet.id === 'saturn' ? 1.02 : 1.28
+      const focusRadius = mobile ? baseFocusRadius * 0.72 : baseFocusRadius
+      const focusScale = 1 + focus * (focusRadius / planet.radius - 1)
+      visualRef.current.scale.setScalar(focusScale + hoverAmount.current * 0.1)
     }
     if (bodyRef.current && !reducedMotion) bodyRef.current.rotation.y += delta * planet.rotationSpeed
     if (cloudRef.current && !reducedMotion) cloudRef.current.rotation.y += delta * (planet.rotationSpeed + 0.025)
     if (materialRef.current) {
-      const lockedVisibility = planet.locked ? 0.55 : 1
-      const targetOpacity = (dimmed ? 0.11 : lockedVisibility) * (hovered ? 1 : 0.96)
+      const targetOpacity = (dimmed ? 0.11 : 1) * (hovered ? 1 : 0.96)
       materialRef.current.opacity = THREE.MathUtils.damp(materialRef.current.opacity, targetOpacity, 3.2, delta)
     }
     if (cloudMaterialRef.current) cloudMaterialRef.current.opacity = THREE.MathUtils.damp(cloudMaterialRef.current.opacity, dimmed ? 0.025 : 0.32, 3, delta)
     if (atmosphereRef.current) {
       const base = planet.id === 'earth' ? 0.12 : 0.025
-      const target = dimmed ? base * 0.18 : base + focus * 0.2 + hoverAmount.current * 0.08
+      const target = dimmed ? base * 0.18 : base + focus * 0.28 + hoverAmount.current * 0.08
       atmosphereRef.current.opacity = THREE.MathUtils.damp(atmosphereRef.current.opacity, target, 4, delta)
     }
     if (ringMaterialRef.current) {
-      const target = dimmed ? 0.05 : planet.locked ? 0.18 : 0.58
+      const target = dimmed ? 0.05 : 0.58
       ringMaterialRef.current.opacity = THREE.MathUtils.damp(ringMaterialRef.current.opacity, target, 3, delta)
     }
   })
@@ -58,7 +60,7 @@ export function Planet({ planet, focusRef, focused, dimmed, reducedMotion, onSel
   return (
     <group ref={visualRef}>
       <mesh
-        scale={planet.id === 'saturn' ? 2.15 : 1.14}
+        scale={hitScale}
         onPointerOver={handlePointerOver}
         onPointerOut={handlePointerOut}
         onClick={(event) => {
@@ -75,13 +77,13 @@ export function Planet({ planet, focusRef, focused, dimmed, reducedMotion, onSel
         <meshStandardMaterial
           ref={materialRef}
           map={getPlanetTexture(planet.texture)}
-          color={planet.locked ? '#a7adb5' : '#ffffff'}
+          color="#ffffff"
           roughness={0.86}
           metalness={0.02}
           emissive={planet.color}
           emissiveIntensity={0.025}
           transparent
-          opacity={planet.locked ? 0.55 : 1}
+          opacity={1}
           depthWrite={!dimmed}
         />
       </mesh>
@@ -117,7 +119,7 @@ export function Planet({ planet, focusRef, focused, dimmed, reducedMotion, onSel
       {planet.id === 'saturn' && (
         <group rotation={[Math.PI / 2.5, 0.12, -0.18]}>
           <mesh>
-            <ringGeometry args={[planet.radius * 1.34, planet.radius * 2.18, 128]} />
+            <ringGeometry args={[planet.radius * 1.32, planet.radius * 1.9, 128]} />
             <meshBasicMaterial
               ref={ringMaterialRef}
               color="#c6a873"
@@ -128,17 +130,10 @@ export function Planet({ planet, focusRef, focused, dimmed, reducedMotion, onSel
             />
           </mesh>
           <mesh>
-            <ringGeometry args={[planet.radius * 1.56, planet.radius * 1.68, 128]} />
+            <ringGeometry args={[planet.radius * 1.5, planet.radius * 1.62, 128]} />
             <meshBasicMaterial color="#6d604d" transparent opacity={0.48} side={THREE.DoubleSide} depthWrite={false} />
           </mesh>
         </group>
-      )}
-
-      {planet.locked && (
-        <mesh rotation={[Math.PI / 2.65, 0.2, 0.3]}>
-          <torusGeometry args={[planet.radius * 1.48, 0.008, 8, 72]} />
-          <meshBasicMaterial color="#8f9aaa" transparent opacity={0.3} depthWrite={false} />
-        </mesh>
       )}
 
       {!focused && (
@@ -151,12 +146,11 @@ export function Planet({ planet, focusRef, focused, dimmed, reducedMotion, onSel
           style={{ pointerEvents: 'none' }}
         >
           <div
-            className={`planet-label ${hovered ? 'is-visible' : ''} ${planet.locked ? 'is-locked' : ''}`}
+            className={`planet-label ${hovered ? 'is-visible' : ''}`}
             style={{ '--planet-color': planet.color }}
           >
-            <span>{planet.locked ? 'Locked world' : hovered ? 'Enter orbit' : planet.module}</span>
+            <span>{hovered ? 'Enter orbit' : planet.module}</span>
             <strong>{planet.name}</strong>
-            {planet.locked && <small>Signal offline</small>}
           </div>
         </Html>
       )}

@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useProfile } from '../../context/profile'
+import { useToast } from '../../context/toast'
 import { jupiterBudget, jupiterCategories, jupiterExpenses } from '../../data/mockData'
 import { useCurrentDay, useLocalStorage } from '../../hooks/useLocalStorage'
 import { createId, formatMoney, formatShortDate, todayIso } from '../../utils/format'
@@ -16,16 +17,20 @@ const categoryFor = (id) => jupiterCategories.find((category) => category.id ===
 
 export function JupiterDashboard() {
   const { profile } = useProfile()
+  const { showToast } = useToast()
   const today = useCurrentDay(profile.timezone)
   const [expenses, setExpenses] = useLocalStorage('personal-cosmos:jupiter-expenses', jupiterExpenses)
+  const [budget, setBudget] = useLocalStorage('personal-cosmos:jupiter-budget', jupiterBudget)
+  const [budgetDraft, setBudgetDraft] = useState(String(budget))
   const [draft, setDraft] = useState(() => emptyDraft(today))
   const [editingId, setEditingId] = useState(null)
   const safeExpenses = Array.isArray(expenses) ? expenses : jupiterExpenses
   const month = today.slice(0, 7)
   const monthExpenses = safeExpenses.filter((expense) => String(expense.date).startsWith(month))
   const total = monthExpenses.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0)
-  const remaining = jupiterBudget - total
-  const spentPercent = Math.min(100, Math.round((total / jupiterBudget) * 100))
+  const monthlyBudget = Math.max(0, Number(budget) || 0)
+  const remaining = monthlyBudget - total
+  const spentPercent = monthlyBudget ? Math.min(100, Math.round((total / monthlyBudget) * 100)) : 0
   const sortedExpenses = [...monthExpenses].sort((first, second) => String(second.date).localeCompare(String(first.date)))
   const categoryTotals = jupiterCategories.map((category) => ({
     ...category,
@@ -34,6 +39,9 @@ export function JupiterDashboard() {
       .reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0),
   }))
   const amountValue = Number(draft.amount)
+  const currency = profile.currency || 'USD'
+
+  useEffect(() => setBudgetDraft(String(budget)), [budget])
 
   const startEdit = (expense) => {
     setEditingId(expense.id)
@@ -74,8 +82,20 @@ export function JupiterDashboard() {
   }
 
   const removeExpense = (expenseId) => {
+    const removed = safeExpenses.find((expense) => expense.id === expenseId)
     setExpenses((current) => (Array.isArray(current) ? current : jupiterExpenses).filter((expense) => expense.id !== expenseId))
     if (editingId === expenseId) cancelEdit()
+    if (removed) {
+      showToast(`Deleted “${removed.title}”`, {
+        actionLabel: 'Undo',
+        onAction: () => setExpenses((current) => [...(Array.isArray(current) ? current : jupiterExpenses), removed]),
+      })
+    }
+  }
+
+  const saveBudget = (event) => {
+    event.preventDefault()
+    setBudget(Math.max(0, Math.round((Number(budgetDraft) || 0) * 100) / 100))
   }
 
   return (
@@ -87,7 +107,7 @@ export function JupiterDashboard() {
           <p className="dashboard-date">Every small entry keeps the whole picture honest.</p>
         </div>
         <div className="mercury-count jupiter-count">
-          <strong>{formatMoney(total)}</strong>
+          <strong>{formatMoney(total, currency)}</strong>
           <span>spent this month</span>
         </div>
       </header>
@@ -102,20 +122,35 @@ export function JupiterDashboard() {
             <span className="section-count">{monthExpenses.length} entries</span>
           </div>
           <div className="spend-total">
-            {formatMoney(total)}
-            <span>of {formatMoney(jupiterBudget)}</span>
+            {formatMoney(total, currency)}
+            <span>of {formatMoney(monthlyBudget, currency)}</span>
           </div>
+          <form className="budget-form" onSubmit={saveBudget}>
+            <label>
+              <span>Monthly budget</span>
+              <input
+                className="field-input compact-number"
+                type="number"
+                min="0"
+                step="1"
+                value={budgetDraft}
+                onChange={(event) => setBudgetDraft(event.target.value)}
+                aria-label="Monthly budget"
+              />
+            </label>
+            <button className="mini-action" type="submit">Save</button>
+          </form>
           <div className="budget-track" aria-label={`${spentPercent}% of monthly budget used`}>
             <span className={remaining < 0 ? 'is-over' : ''} style={{ width: `${spentPercent}%` }} />
           </div>
           <div className="spend-stats">
             <div>
               <span>{remaining < 0 ? 'Over budget' : 'Remaining'}</span>
-              <strong className={remaining < 0 ? 'is-over' : ''}>{formatMoney(Math.abs(remaining))}</strong>
+              <strong className={remaining < 0 ? 'is-over' : ''}>{formatMoney(Math.abs(remaining), currency)}</strong>
             </div>
             <div>
               <span>Daily average</span>
-              <strong>{formatMoney(total / Math.max(1, Number(today.slice(8, 10))))}</strong>
+              <strong>{formatMoney(total / Math.max(1, Number(today.slice(8, 10))), currency)}</strong>
             </div>
           </div>
           <div className="category-breakdown">
@@ -125,7 +160,7 @@ export function JupiterDashboard() {
                 <div className="category-track">
                   <span style={{ width: `${total ? (category.total / total) * 100 : 0}%`, background: category.color }} />
                 </div>
-                <strong>{formatMoney(category.total)}</strong>
+                <strong>{formatMoney(category.total, currency)}</strong>
               </div>
             ))}
           </div>
@@ -196,7 +231,7 @@ export function JupiterDashboard() {
             <p className="section-kicker">This month</p>
             <h2>Expense log</h2>
           </div>
-          <span className="section-count">{formatMoney(total)}</span>
+          <span className="section-count">{formatMoney(total, currency)}</span>
         </div>
         <div className="expense-list">
           <div className="expense-list__head">
@@ -209,7 +244,7 @@ export function JupiterDashboard() {
                 <span className="expense-title"><i style={{ background: category.color }} />{expense.title}</span>
                 <span>{category.label}</span>
                 <span>{formatShortDate(expense.date)}</span>
-                <strong>{formatMoney(expense.amount)}</strong>
+                <strong>{formatMoney(expense.amount, currency)}</strong>
                 <div className="row-actions">
                   <button className="icon-action" type="button" onClick={() => startEdit(expense)} aria-label={`Edit ${expense.title}`}>
                     <EditIcon />

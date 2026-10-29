@@ -9,6 +9,14 @@ import { Sun } from './Sun'
 const mobilePlanetIds = new Set(['earth', 'moon', 'mars', 'saturn', 'mercury', 'jupiter', 'neptune'])
 
 export function CosmosScene({ focusedPlanet, mobile, reducedMotion, onSelect, onHover }) {
+  const visiblePlanets = planets.filter((planet) => !mobile || mobilePlanetIds.has(planet.id))
+  const primaryPlanets = visiblePlanets.filter((planet) => !planet.parent)
+  const moonsByParent = visiblePlanets.reduce((groups, planet) => {
+    if (!planet.parent) return groups
+    ;(groups[planet.parent] ??= []).push(planet)
+    return groups
+  }, {})
+
   return (
     <Canvas
       className="cosmos-canvas"
@@ -30,20 +38,31 @@ export function CosmosScene({ focusedPlanet, mobile, reducedMotion, onSelect, on
       <directionalLight position={[6, -3, -7]} intensity={0.18} color="#7797c6" />
       <StarField reducedMotion={reducedMotion} />
       <Sun reducedMotion={reducedMotion} dimmed={Boolean(focusedPlanet)} />
-      {planets
-        .filter((planet) => !mobile || mobilePlanetIds.has(planet.id))
-        .map((planet) => (
-          <OrbitingPlanet
-            key={planet.id}
-            planet={planet}
-            focused={focusedPlanet === planet.id}
-            dimmed={Boolean(focusedPlanet) && focusedPlanet !== planet.id}
-            mobile={mobile}
-            reducedMotion={reducedMotion}
-            onSelect={onSelect}
-            onHover={onHover}
-          />
-        ))}
+      {primaryPlanets.map((planet) => (
+        <OrbitingPlanet
+          key={planet.id}
+          planet={planet}
+          focused={focusedPlanet === planet.id}
+          dimmed={Boolean(focusedPlanet) && focusedPlanet !== planet.id}
+          mobile={mobile}
+          reducedMotion={reducedMotion}
+          onSelect={onSelect}
+          onHover={onHover}
+        >
+          {(moonsByParent[planet.id] ?? []).map((moon) => (
+            <OrbitingPlanet
+              key={moon.id}
+              planet={moon}
+              focused={focusedPlanet === moon.id}
+              dimmed={Boolean(focusedPlanet) && focusedPlanet !== moon.id}
+              mobile={mobile}
+              reducedMotion={reducedMotion}
+              onSelect={onSelect}
+              onHover={onHover}
+            />
+          ))}
+        </OrbitingPlanet>
+      ))}
     </Canvas>
   )
 }

@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Java backend build output and uploaded files
+server/target
+server/data
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

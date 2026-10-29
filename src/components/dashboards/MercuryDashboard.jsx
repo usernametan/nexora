@@ -1,27 +1,32 @@
 import { useState } from 'react'
 import { useProfile } from '../../context/profile'
+import { useToast } from '../../context/toast'
 import { mercuryItems } from '../../data/mockData'
 import { useLocalStorage } from '../../hooks/useLocalStorage'
 import { createId, formatShortDate, todayIso } from '../../utils/format'
 import { CheckIcon, EditIcon, PlusIcon, TrashIcon } from '../ui/Icons'
 import { GlassPanel } from '../ui/GlassPanel'
 
-const emptyDraft = { title: '', detail: '', kind: 'errand' }
+const emptyDraft = { title: '', detail: '', kind: 'errand', due: '' }
 
 export function MercuryDashboard() {
   const { profile } = useProfile()
+  const { showToast } = useToast()
   const [items, setItems] = useLocalStorage('personal-cosmos:mercury-items', mercuryItems)
   const [draft, setDraft] = useState(emptyDraft)
   const [editingId, setEditingId] = useState(null)
   const safeItems = Array.isArray(items) ? items : mercuryItems
   const openItems = safeItems.filter((item) => !item.done)
+  const today = todayIso(profile.timezone)
   const sortedItems = [...safeItems].sort((first, second) => (
-    Number(first.done) - Number(second.done) || String(second.created).localeCompare(String(first.created))
+    Number(first.done) - Number(second.done)
+    || String(first.due || '9999').localeCompare(String(second.due || '9999'))
+    || String(second.created).localeCompare(String(first.created))
   ))
 
   const startEdit = (item) => {
     setEditingId(item.id)
-    setDraft({ title: item.title, detail: item.detail ?? '', kind: item.kind ?? 'note' })
+    setDraft({ title: item.title, detail: item.detail ?? '', kind: item.kind ?? 'note', due: item.due ?? '' })
   }
 
   const cancelEdit = () => {
@@ -36,7 +41,7 @@ export function MercuryDashboard() {
     const detail = draft.detail.trim()
     if (editingId) {
       setItems((current) => (Array.isArray(current) ? current : mercuryItems).map((item) => (
-        item.id === editingId ? { ...item, title, detail, kind: draft.kind } : item
+        item.id === editingId ? { ...item, title, detail, kind: draft.kind, due: draft.due } : item
       )))
     } else {
       setItems((current) => [...(Array.isArray(current) ? current : mercuryItems), {
@@ -45,6 +50,7 @@ export function MercuryDashboard() {
         detail,
         kind: draft.kind,
         done: false,
+        due: draft.due,
         created: todayIso(profile.timezone),
       }])
     }
@@ -58,8 +64,15 @@ export function MercuryDashboard() {
   }
 
   const removeItem = (itemId) => {
+    const removed = safeItems.find((item) => item.id === itemId)
     setItems((current) => (Array.isArray(current) ? current : mercuryItems).filter((item) => item.id !== itemId))
     if (editingId === itemId) cancelEdit()
+    if (removed) {
+      showToast(`Deleted “${removed.title}”`, {
+        actionLabel: 'Undo',
+        onAction: () => setItems((current) => [...(Array.isArray(current) ? current : mercuryItems), removed]),
+      })
+    }
   }
 
   return (
@@ -103,6 +116,16 @@ export function MercuryDashboard() {
               aria-label="Item detail"
               rows={3}
             />
+            <div className="field-row">
+              <input
+                className="field-input field-input--date"
+                type="date"
+                value={draft.due}
+                onChange={(event) => setDraft((current) => ({ ...current, due: event.target.value }))}
+                aria-label="Due date"
+              />
+              <span className="field-hint field-hint--inline">Optional reminder date</span>
+            </div>
             <div className="segmented" role="group" aria-label="Item type">
               {['errand', 'note'].map((kind) => (
                 <button
@@ -157,7 +180,15 @@ export function MercuryDashboard() {
                       <strong>{item.title}</strong>
                     </div>
                     {item.detail && <small>{item.detail}</small>}
-                    <time>{formatShortDate(item.created)}</time>
+                    <div className="record-meta">
+                      <time>Added {formatShortDate(item.created)}</time>
+                      {item.due && (
+                        <span className={`due-chip ${!item.done && item.due < today ? 'is-overdue' : ''}`}>
+                          {!item.done && item.due < today ? 'Overdue · ' : 'Due · '}
+                          {formatShortDate(item.due)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="row-actions">
                     <button className="icon-action" type="button" onClick={() => startEdit(item)} aria-label={`Edit ${item.title}`}>

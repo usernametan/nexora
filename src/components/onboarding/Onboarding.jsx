@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useProfile } from '../../context/profile'
 import { timeZones } from '../../data/timezones'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { OrbitIcon, SparkIcon } from '../ui/Icons'
 
 export function Onboarding() {
@@ -8,6 +9,8 @@ export function Onboarding() {
   const [name, setName] = useState(profile.name)
   const [timezone, setTimezone] = useState(profile.timezone)
   const [error, setError] = useState('')
+  const cardRef = useRef(null)
+  useFocusTrap(cardRef, true)
 
   const submit = (event) => {
     event.preventDefault()
@@ -21,7 +24,7 @@ export function Onboarding() {
 
   return (
     <div className="onboarding-overlay">
-      <section className="profile-card onboarding-card" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+      <section ref={cardRef} className="profile-card onboarding-card" role="dialog" aria-modal="true" aria-labelledby="onboarding-title" tabIndex={-1}>
         <div className="onboarding-mark"><OrbitIcon size={30} /></div>
         <p className="profile-kicker"><SparkIcon size={13} /> First orbit</p>
         <h2 id="onboarding-title">Make this cosmos yours</h2>

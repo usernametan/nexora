@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useProfile } from '../../context/profile'
+import { useToast } from '../../context/toast'
 import { neptuneBookmarks } from '../../data/mockData'
 import { useLocalStorage } from '../../hooks/useLocalStorage'
 import { createId, formatShortDate, hostFromUrl, todayIso } from '../../utils/format'
 import { CheckIcon, EditIcon, ExternalLinkIcon, PlusIcon, SearchIcon, TrashIcon } from '../ui/Icons'
 import { GlassPanel } from '../ui/GlassPanel'
 
-const emptyDraft = { title: '', url: '', tags: '', note: '' }
+const emptyDraft = { title: '', url: '', tags: '', note: '', folder: 'inbox' }
+const defaultFolders = ['inbox', 'development', 'reference', 'design', 'reading']
 
 const normalizeUrl = (value) => {
   const trimmed = value.trim()
@@ -25,14 +27,19 @@ const parseTags = (value) => [...new Set(
 
 export function NeptuneDashboard() {
   const { profile } = useProfile()
+  const { showToast } = useToast()
   const [bookmarks, setBookmarks] = useLocalStorage('personal-cosmos:neptune-bookmarks', neptuneBookmarks)
   const [draft, setDraft] = useState(emptyDraft)
   const [editingId, setEditingId] = useState(null)
   const [query, setQuery] = useState('')
+  const [folderFilter, setFolderFilter] = useState('all')
+  const importRef = useRef(null)
   const safeBookmarks = Array.isArray(bookmarks) ? bookmarks : neptuneBookmarks
   const normalizedUrl = normalizeUrl(draft.url)
   const needle = query.trim().toLowerCase()
+  const folders = [...new Set([...defaultFolders, ...safeBookmarks.map((bookmark) => bookmark.folder).filter(Boolean)])]
   const visibleBookmarks = safeBookmarks
+    .filter((bookmark) => folderFilter === 'all' || (bookmark.folder || 'inbox') === folderFilter)
     .filter((bookmark) => (
       !needle
       || bookmark.title.toLowerCase().includes(needle)
@@ -48,6 +55,7 @@ export function NeptuneDashboard() {
       url: bookmark.url,
       tags: bookmark.tags.join(', '),
       note: bookmark.note ?? '',
+      folder: bookmark.folder ?? 'inbox',
     })
   }
 
@@ -65,6 +73,7 @@ export function NeptuneDashboard() {
       url: normalizedUrl,
       tags: parseTags(draft.tags),
       note: draft.note.trim(),
+      folder: draft.folder.trim().toLowerCase() || 'inbox',
     }
     if (editingId) {
       setBookmarks((current) => (Array.isArray(current) ? current : neptuneBookmarks).map((bookmark) => (
@@ -81,8 +90,50 @@ export function NeptuneDashboard() {
   }
 
   const removeBookmark = (bookmarkId) => {
+    const removed = safeBookmarks.find((bookmark) => bookmark.id === bookmarkId)
     setBookmarks((current) => (Array.isArray(current) ? current : neptuneBookmarks).filter((bookmark) => bookmark.id !== bookmarkId))
     if (editingId === bookmarkId) cancelEdit()
+    if (removed) {
+      showToast(`Deleted “${removed.title}”`, {
+        actionLabel: 'Undo',
+        onAction: () => setBookmarks((current) => [...(Array.isArray(current) ? current : neptuneBookmarks), removed]),
+      })
+    }
+  }
+
+  const importBrowserBookmarks = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    try {
+      const html = await file.text()
+      const doc = new DOMParser().parseFromString(html, 'text/html')
+      const existing = new Set(safeBookmarks.map((bookmark) => bookmark.url))
+      const imported = [...doc.querySelectorAll('a[href]')]
+        .map((anchor) => ({
+          title: (anchor.textContent || '').trim() || anchor.href,
+          url: normalizeUrl(anchor.getAttribute('href')),
+        }))
+        .filter((item) => item.url && !existing.has(item.url))
+        .filter((item) => {
+          existing.add(item.url)
+          return true
+        })
+        .map((item) => ({
+          id: createId('bookmark'),
+          title: item.title,
+          url: item.url,
+          tags: ['imported'],
+          note: '',
+          folder: 'inbox',
+          added: todayIso(profile.timezone),
+        }))
+      if (!imported.length) return
+      setBookmarks((current) => [...(Array.isArray(current) ? current : neptuneBookmarks), ...imported])
+      showToast(`Imported ${imported.length} bookmark${imported.length === 1 ? '' : 's'}`, { tone: 'success' })
+    } catch {
+      showToast('That bookmarks file could not be read.', { tone: 'error' })
+    }
   }
 
   return (
@@ -133,6 +184,18 @@ export function NeptuneDashboard() {
               placeholder="Tags, separated by commas"
               aria-label="Bookmark tags"
             />
+            <input
+              className="field-input field-input--quiet"
+              type="text"
+              value={draft.folder}
+              onChange={(event) => setDraft((current) => ({ ...current, folder: event.target.value }))}
+              placeholder="Folder (inbox)"
+              aria-label="Bookmark folder"
+              list="bookmark-folders"
+            />
+            <datalist id="bookmark-folders">
+              {folders.map((folder) => <option value={folder} key={folder} />)}
+            </datalist>
             <textarea
               className="field-input field-textarea"
               value={draft.note}
@@ -160,17 +223,39 @@ export function NeptuneDashboard() {
               <p className="section-kicker">Your collection</p>
               <h2>Saved orbit</h2>
             </div>
-            <label className="vault-search bookmark-search">
-              <SearchIcon size={14} />
-              <span className="sr-only">Search bookmarks</span>
+            <div className="bookmark-tools">
+              <label className="vault-search bookmark-search">
+                <SearchIcon size={14} />
+                <span className="sr-only">Search bookmarks</span>
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Filter links"
+                  aria-label="Search bookmarks"
+                />
+              </label>
+              <select
+                className="field-input field-select compact-select"
+                value={folderFilter}
+                onChange={(event) => setFolderFilter(event.target.value)}
+                aria-label="Filter by folder"
+              >
+                <option value="all">All folders</option>
+                {folders.map((folder) => <option value={folder} key={folder}>{folder}</option>)}
+              </select>
+              <button className="secondary-action compact-action" type="button" onClick={() => importRef.current?.click()}>
+                IMPORT BROWSER
+              </button>
               <input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Filter links"
-                aria-label="Search bookmarks"
+                ref={importRef}
+                className="sr-only"
+                type="file"
+                accept="text/html,.html"
+                onChange={importBrowserBookmarks}
+                aria-label="Import browser bookmarks HTML file"
               />
-            </label>
+            </div>
           </div>
 
           <div className="bookmark-list">
@@ -188,6 +273,7 @@ export function NeptuneDashboard() {
                 {bookmark.note && <p>{bookmark.note}</p>}
                 <div className="bookmark-footer">
                   <div className="tag-list">
+                    <span className="folder-chip">{bookmark.folder || 'inbox'}</span>
                     {bookmark.tags.map((tag) => <span key={tag}>{tag}</span>)}
                   </div>
                   <time>{formatShortDate(bookmark.added)}</time>
