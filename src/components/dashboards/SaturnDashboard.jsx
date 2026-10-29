@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useProfile } from '../../context/profile'
+import { useToast } from '../../context/toast'
 import { ambientOptions } from '../../data/mockData'
 import {
   dailyStorageKey,
@@ -10,11 +11,12 @@ import {
 } from '../../hooks/useLocalStorage'
 import { useAmbientAudio } from '../../hooks/useAmbientAudio'
 import { createId, formatMinutes, isoDay, sessionMinutes } from '../../utils/format'
-import { PauseIcon, PlayIcon, ResetIcon } from '../ui/Icons'
+import { PauseIcon, PlayIcon, ResetIcon, TrashIcon } from '../ui/Icons'
 import { GlassPanel } from '../ui/GlassPanel'
 
 const TIMER_DURATION = 25 * 60
 const SECONDS_KEY = 'personal-cosmos:saturn-seconds'
+const END_AT_KEY = 'personal-cosmos:saturn-end-at'
 const SESSIONS_KEY = 'personal-cosmos:saturn-sessions'
 
 const formatTimer = (seconds) => {
@@ -23,19 +25,27 @@ const formatTimer = (seconds) => {
   return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`
 }
 
+const initialSeconds = () => {
+  const stored = readStoredValue(SECONDS_KEY, TIMER_DURATION)
+  if (typeof stored !== 'number' || !Number.isFinite(stored)) return TIMER_DURATION
+  return Math.min(TIMER_DURATION, Math.max(0, stored))
+}
+
 export function SaturnDashboard() {
   const { profile } = useProfile()
+  const { showToast } = useToast()
   const today = useCurrentDay(profile.timezone)
-  const [seconds, setSeconds] = useState(() => {
-    const stored = readStoredValue(SECONDS_KEY, TIMER_DURATION)
-    if (typeof stored !== 'number' || !Number.isFinite(stored)) return TIMER_DURATION
-    return Math.min(TIMER_DURATION, Math.max(0, stored))
-  })
+  const [seconds, setSeconds] = useState(initialSeconds)
+  const [endAt, setEndAt] = useLocalStorage(END_AT_KEY, null)
   const [sessions, setSessions] = useLocalStorage(dailyStorageKey(SESSIONS_KEY, today), [])
   const [ambient, setAmbient] = useLocalStorage('personal-cosmos:saturn-ambient', 'space')
   const [audioEnabled, setAudioEnabled] = useState(false)
-  const [running, setRunning] = useState(false)
+  const [notifications, setNotifications] = useState(() => (
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported'
+  ))
   const secondsRef = useRef(seconds)
+  const completionRef = useRef(false)
+  const running = Boolean(endAt)
   useAmbientAudio(ambient, audioEnabled)
 
   const safeSessions = useMemo(() => (Array.isArray(sessions) ? sessions : []), [sessions])
@@ -69,17 +79,28 @@ export function SaturnDashboard() {
     writeStoredValue(SECONDS_KEY, secondsRef.current)
   }, [])
 
-  useEffect(() => {
-    if (!running) return undefined
-    const timer = window.setInterval(() => {
-      setSeconds((current) => Math.max(0, current - 1))
-    }, 1000)
-    return () => window.clearInterval(timer)
-  }, [running])
+  const notifyCompletion = useCallback(async () => {
+    try {
+      if (typeof window === 'undefined' || !('Notification' in window)) return
+      let permission = Notification.permission
+      if (permission === 'default') permission = await Notification.requestPermission()
+      setNotifications(permission)
+      if (permission !== 'granted') return
+      new Notification('Focus session complete', {
+        body: 'Twenty-five protected minutes are in the log. Take a short reset.',
+        icon: '/favicon.svg',
+        tag: 'personal-cosmos-focus',
+      })
+    } catch {
+      // Notification permission errors are non-fatal.
+    }
+  }, [])
 
-  useEffect(() => {
-    if (!running || seconds > 0) return
-    setRunning(false)
+  const completeSession = useCallback(() => {
+    if (completionRef.current) return
+    completionRef.current = true
+    setEndAt(null)
+    setSeconds(0)
     writeStoredValue(SECONDS_KEY, 0)
     setSessions((current) => [...(Array.isArray(current) ? current : []), {
       id: createId('focus'),
@@ -88,7 +109,26 @@ export function SaturnDashboard() {
       color: '#d9ab72',
       date: today,
     }])
-  }, [running, seconds, setSessions, today])
+    showToast('Focus session complete. Twenty-five minutes logged.', { tone: 'success' })
+    notifyCompletion()
+    window.setTimeout(() => { completionRef.current = false }, 1000)
+  }, [notifyCompletion, setEndAt, setSessions, showToast, today])
+
+  useEffect(() => {
+    if (!endAt) return undefined
+    let interval
+    const tick = () => {
+      const next = Math.max(0, Math.ceil((endAt - Date.now()) / 1000))
+      setSeconds(next)
+      if (next <= 0) {
+        completeSession()
+        window.clearInterval(interval)
+      }
+    }
+    tick()
+    interval = window.setInterval(tick, 250)
+    return () => window.clearInterval(interval)
+  }, [completeSession, endAt])
 
   const timerProgress = useMemo(() => {
     const elapsed = TIMER_DURATION - seconds
@@ -97,21 +137,21 @@ export function SaturnDashboard() {
 
   const toggleTimer = () => {
     if (running) {
-      setRunning(false)
-      writeStoredValue(SECONDS_KEY, seconds)
+      const remaining = Math.max(0, Math.ceil((endAt - Date.now()) / 1000))
+      setEndAt(null)
+      setSeconds(remaining)
+      writeStoredValue(SECONDS_KEY, remaining)
       return
     }
-    if (seconds === 0) {
-      setSeconds(TIMER_DURATION)
-      writeStoredValue(SECONDS_KEY, TIMER_DURATION)
-      setRunning(true)
-      return
-    }
-    setRunning(true)
+    const nextSeconds = seconds === 0 ? TIMER_DURATION : seconds
+    setSeconds(nextSeconds)
+    setEndAt(Date.now() + nextSeconds * 1000)
+    writeStoredValue(SECONDS_KEY, nextSeconds)
+    notifyCompletion()
   }
 
   const resetTimer = () => {
-    setRunning(false)
+    setEndAt(null)
     setSeconds(TIMER_DURATION)
     writeStoredValue(SECONDS_KEY, TIMER_DURATION)
   }
@@ -119,6 +159,17 @@ export function SaturnDashboard() {
   const chooseAmbient = (optionId) => {
     setAmbient(optionId)
     setAudioEnabled(true)
+  }
+
+  const removeSession = (sessionId) => {
+    const removed = safeSessions.find((session) => session.id === sessionId)
+    setSessions((current) => (Array.isArray(current) ? current : []).filter((session) => session.id !== sessionId))
+    if (removed) {
+      showToast('Session removed', {
+        actionLabel: 'Undo',
+        onAction: () => setSessions((current) => [...(Array.isArray(current) ? current : []), removed]),
+      })
+    }
   }
 
   return (
@@ -157,6 +208,11 @@ export function SaturnDashboard() {
             <button className="secondary-action" type="button" onClick={resetTimer}>
               <ResetIcon /> RESET
             </button>
+            {notifications !== 'granted' && notifications !== 'unsupported' && (
+              <button className="secondary-action" type="button" onClick={notifyCompletion}>
+                ENABLE ALERTS
+              </button>
+            )}
           </div>
         </GlassPanel>
 
@@ -173,6 +229,16 @@ export function SaturnDashboard() {
                   <span>{session.label}</span>
                   <strong>{formatMinutes(sessionMinutes(session))}</strong>
                   <small>{session.date ? new Date(`${session.date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Complete'}</small>
+                  {session.id && (
+                    <button
+                      className="icon-action icon-action--danger session-delete"
+                      type="button"
+                      onClick={() => removeSession(session.id)}
+                      aria-label={`Delete ${session.label} session`}
+                    >
+                      <TrashIcon size={12} />
+                    </button>
+                  )}
                 </div>
               ))}
               {safeSessions.length === 0 && <p className="empty-state">No sessions logged yet. Start the timer above.</p>}

@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: personal-cosmos-api
+  datasource:
+    url: jdbc:h2:mem:personalcosmos;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    show-sql: false
+    properties:
+      hibernate:
+        show_sql: false
+        format_sql: false
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: false
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 21MB
+
+server:
+  port: 8080
+
+app:
+  jwt:
+    # Development-only fallback. Production MUST set APP_JWT_SECRET (>= 32 chars).
+    secret: ${APP_JWT_SECRET:dev-only-insecure-jwt-secret-change-me-please}
+    expiration-ms: ${APP_JWT_EXPIRATION_MS:604800000}
+  cors:
+    allowed-origins: ${APP_CORS_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
+  file-storage-dir: ${APP_FILE_STORAGE_DIR:./data/uploads}
+
+logging:
+  level:
+    com.personalcosmos.api: INFO

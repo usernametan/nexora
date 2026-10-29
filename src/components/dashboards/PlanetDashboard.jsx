@@ -1,26 +1,30 @@
-import { useLayoutEffect, useRef } from 'react'
+import { lazy, Suspense, useLayoutEffect, useRef } from 'react'
 import gsap from 'gsap'
+import { useAuth } from '../../context/auth'
 import { BackButton } from '../ui/BackButton'
-import { EarthDashboard } from './EarthDashboard'
-import { MoonDashboard } from './MoonDashboard'
-import { MarsDashboard } from './MarsDashboard'
-import { SaturnDashboard } from './SaturnDashboard'
-import { MercuryDashboard } from './MercuryDashboard'
-import { JupiterDashboard } from './JupiterDashboard'
-import { NeptuneDashboard } from './NeptuneDashboard'
 
 const dashboards = {
-  earth: EarthDashboard,
-  moon: MoonDashboard,
-  mars: MarsDashboard,
-  saturn: SaturnDashboard,
-  mercury: MercuryDashboard,
-  jupiter: JupiterDashboard,
-  neptune: NeptuneDashboard,
+  earth: lazy(() => import('./EarthDashboard').then((module) => ({ default: module.EarthDashboard }))),
+  moon: lazy(() => import('./MoonDashboard').then((module) => ({ default: module.MoonDashboard }))),
+  mars: lazy(() => import('./MarsDashboard').then((module) => ({ default: module.MarsDashboard }))),
+  saturn: lazy(() => import('./SaturnDashboard').then((module) => ({ default: module.SaturnDashboard }))),
+  mercury: lazy(() => import('./MercuryDashboard').then((module) => ({ default: module.MercuryDashboard }))),
+  jupiter: lazy(() => import('./JupiterDashboard').then((module) => ({ default: module.JupiterDashboard }))),
+  neptune: lazy(() => import('./NeptuneDashboard').then((module) => ({ default: module.NeptuneDashboard }))),
+}
+
+function DashboardLoading() {
+  return (
+    <div className="dashboard-loading" role="status" aria-live="polite">
+      <span />
+      <p>Aligning orbit…</p>
+    </div>
+  )
 }
 
 export function PlanetDashboard({ planet, isClosing, reducedMotion, onBack, onExited }) {
   const shellRef = useRef(null)
+  const { signedIn } = useAuth()
   const Dashboard = dashboards[planet.id]
 
   useLayoutEffect(() => {
@@ -58,6 +62,7 @@ export function PlanetDashboard({ planet, isClosing, reducedMotion, onBack, onEx
       ref={shellRef}
       className={`planet-dashboard planet-dashboard--${planet.id} ${isClosing ? 'is-closing' : ''}`}
       aria-label={`${planet.name} ${planet.module} dashboard`}
+      style={{ '--planet-accent': planet.color }}
     >
       <div className="dashboard-vignette" />
       <div className="dashboard-shell">
@@ -70,10 +75,16 @@ export function PlanetDashboard({ planet, isClosing, reducedMotion, onBack, onEx
           </div>
         </div>
         <div className="dashboard-scroll">
-          <Dashboard />
+          {Dashboard ? (
+            <Suspense fallback={<DashboardLoading />}>
+              <Dashboard />
+            </Suspense>
+          ) : (
+            <DashboardLoading />
+          )}
           <footer className="dashboard-footer">
             <span>PERSONAL COSMOS</span>
-            <span>LOCAL PROTOTYPE · SAVED ON THIS DEVICE</span>
+            <span>{signedIn ? 'CLOUD SYNC ACTIVE · PRIVATE' : 'PRIVATE · SAVED ON THIS DEVICE'}</span>
           </footer>
         </div>
       </div>

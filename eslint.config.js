@@ -37,4 +37,12 @@ export default [
       ],
     },
   },
+  {
+    files: ['tests/**/*.{js,jsx}', '*.config.js'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
 ]

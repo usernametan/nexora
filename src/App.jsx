@@ -1,50 +1,59 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom'
 import './App.css'
 import { CosmosScene } from './components/cosmos/CosmosScene'
 import { SpaceshipCursor } from './components/cosmos/SpaceshipCursor'
-import { LockedPlanet } from './components/dashboards/LockedPlanet'
 import { PlanetDashboard } from './components/dashboards/PlanetDashboard'
 import { PlanetSidebar } from './components/navigation/PlanetSidebar'
 import { Onboarding } from './components/onboarding/Onboarding'
 import { SettingsPanel } from './components/settings/SettingsPanel'
+import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { SparkIcon } from './components/ui/Icons'
-import { ProfileProvider } from './context/ProfileContext'
+import { WebGLFallback } from './components/ui/WebGLFallback'
 import { useProfile } from './context/profile'
 import { planets } from './data/mockData'
+import { useLocalStorage } from './hooks/useLocalStorage'
 import { useMediaQuery } from './hooks/useMediaQuery'
 import { useReducedMotion } from './hooks/useReducedMotion'
 
 function CosmosApp() {
-  const [activePlanet, setActivePlanet] = useState(null)
-  const [lockedPlanet, setLockedPlanet] = useState(null)
+  const { planetId } = useParams()
+  const navigate = useNavigate()
   const [hoveredPlanet, setHoveredPlanet] = useState(null)
   const [isClosing, setIsClosing] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useLocalStorage('personal-cosmos:sidebar-open', true)
   const mobile = useMediaQuery('(max-width: 760px)')
   const reducedMotion = useReducedMotion()
   const { profile } = useProfile()
-  const activePlanetData = useMemo(() => planets.find((planet) => planet.id === activePlanet) ?? null, [activePlanet])
+  const activePlanetData = useMemo(() => planets.find((planet) => planet.id === planetId) ?? null, [planetId])
+
+  useEffect(() => {
+    if (planetId && !activePlanetData) navigate('/', { replace: true })
+  }, [activePlanetData, navigate, planetId])
+
+  useEffect(() => {
+    document.title = activePlanetData
+      ? `${activePlanetData.name} · Personal Cosmos`
+      : 'Personal Cosmos'
+  }, [activePlanetData])
 
   const handleSelect = useCallback((planet) => {
     setHoveredPlanet(null)
-    if (planet.locked) {
-      setLockedPlanet(planet)
-      return
-    }
-    if (activePlanet === planet.id) return
+    if (activePlanetData?.id === planet.id) return
     setIsClosing(false)
-    setActivePlanet(planet.id)
-  }, [activePlanet])
+    navigate(`/world/${planet.id}`)
+  }, [activePlanetData, navigate])
 
   const handleBack = useCallback(() => {
-    if (activePlanet && !isClosing) setIsClosing(true)
-  }, [activePlanet, isClosing])
+    if (activePlanetData && !isClosing) setIsClosing(true)
+  }, [activePlanetData, isClosing])
 
   const handleDashboardExited = useCallback(() => {
-    setActivePlanet(null)
     setIsClosing(false)
     setHoveredPlanet(null)
-  }, [])
+    navigate('/')
+  }, [navigate])
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -53,23 +62,28 @@ function CosmosApp() {
         setSettingsOpen(false)
         return
       }
-      if (lockedPlanet) setLockedPlanet(null)
-      else handleBack()
+      handleBack()
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleBack, lockedPlanet, settingsOpen])
+  }, [handleBack, settingsOpen])
 
   return (
-    <div className={`app-shell ${activePlanetData ? 'has-active-planet' : 'is-cosmos'}`}>
+    <div className={`app-shell ${activePlanetData ? 'has-active-planet' : 'is-cosmos'} ${sidebarOpen ? '' : 'is-sidebar-hidden'}`}>
+      <a className="skip-link" href="#world-navigation-panel">Skip to world navigation</a>
+
       <div className="cosmos-stage">
-        <CosmosScene
-          focusedPlanet={activePlanet}
-          mobile={mobile}
-          reducedMotion={reducedMotion}
-          onSelect={handleSelect}
-          onHover={setHoveredPlanet}
-        />
+        <ErrorBoundary>
+          <WebGLFallback>
+            <CosmosScene
+              focusedPlanet={activePlanetData?.id ?? null}
+              mobile={mobile}
+              reducedMotion={reducedMotion}
+              onSelect={handleSelect}
+              onHover={setHoveredPlanet}
+            />
+          </WebGLFallback>
+        </ErrorBoundary>
         <div className="cosmos-vignette" aria-hidden="true" />
         <div className="cosmos-grain" aria-hidden="true" />
       </div>
@@ -79,6 +93,8 @@ function CosmosApp() {
         onSelect={handleSelect}
         onHome={handleBack}
         onOpenSettings={() => setSettingsOpen(true)}
+        collapsed={!sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen((open) => !open)}
       />
 
       <div className={`cosmos-interface ${activePlanetData ? 'is-hidden' : ''}`} aria-hidden={Boolean(activePlanetData)}>
@@ -106,7 +122,7 @@ function CosmosApp() {
       </div>
 
       <SpaceshipCursor
-        enabled={!activePlanetData && !lockedPlanet && !settingsOpen && profile.onboarded}
+        enabled={!activePlanetData && !settingsOpen && profile.onboarded}
         targeted={Boolean(hoveredPlanet)}
         reducedMotion={reducedMotion}
       />
@@ -122,25 +138,34 @@ function CosmosApp() {
         />
       )}
 
-      {lockedPlanet && (
-        <LockedPlanet
-          key={lockedPlanet.id}
-          planet={lockedPlanet}
-          reducedMotion={reducedMotion}
-          onClose={() => setLockedPlanet(null)}
-        />
-      )}
-
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
       {!profile.onboarded && <Onboarding />}
     </div>
   )
 }
 
+function NotFound() {
+  return (
+    <div className="app-fallback">
+      <div className="app-fallback__card">
+        <p className="profile-kicker">Lost orbit</p>
+        <h1>This world does not exist.</h1>
+        <p>The address may be old, or the planet may have drifted out of range.</p>
+        <button className="primary-action" type="button" onClick={() => window.location.assign('/')}>
+          RETURN TO COSMOS
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   return (
-    <ProfileProvider>
-      <CosmosApp />
-    </ProfileProvider>
+    <Routes>
+      <Route path="/" element={<CosmosApp />} />
+      <Route path="/world/:planetId" element={<CosmosApp />} />
+      <Route path="/cosmos" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   )
 }

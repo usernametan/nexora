@@ -66,11 +66,17 @@ export const sessionMinutes = (session) => {
   return hours * 60 + minutes
 }
 
-export const formatMoney = (value) => new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 2,
-}).format(Number(value) || 0)
+export const formatMoney = (value, currency = 'USD') => {
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 2,
+    }).format(Number(value) || 0)
+  } catch {
+    return `${currency} ${(Number(value) || 0).toFixed(2)}`
+  }
+}
 
 const dateFromKey = (isoDate) => {
   if (!isoDate) return null
@@ -90,6 +96,13 @@ export const formatMonthYear = (isoDate, locale = 'en-US') => {
   const date = dateFromKey(isoDate?.length === 7 ? `${isoDate}-01` : isoDate)
   if (!date) return ''
   return date.toLocaleDateString(locale, { month: 'long', year: 'numeric' })
+}
+
+export const daysBetween = (startIso, endIso) => {
+  const start = dateFromKey(startIso)
+  const end = dateFromKey(endIso)
+  if (!start || !end) return 0
+  return Math.round((end.getTime() - start.getTime()) / 86400000)
 }
 
 export const formatShortDate = (isoDate) => {
