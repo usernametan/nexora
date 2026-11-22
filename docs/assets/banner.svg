@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 280" width="1200" height="280" role="img" aria-label="Nexora — Personal Cosmos 3D Productivity Environment">
+  <defs>
+    <pattern id="grid-nx" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#161616" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="280" fill="#0a0a0a"/>
+  <rect width="1200" height="280" fill="url(#grid-nx)"/>
+
+  <!-- Minimalist 7-Orbit Solar Schematic -->
+  <g transform="translate(1010, 140)" fill="none">
+    <circle r="102" stroke="#1f1f1f" stroke-width="1"/>
+    <circle r="84" stroke="#262626" stroke-width="1"/>
+    <circle r="66" stroke="#303030" stroke-width="1"/>
+    <circle r="48" stroke="#404040" stroke-width="1"/>
+    <circle r="30" stroke="#525252" stroke-width="1"/>
+    <circle cx="0" cy="0" r="8" fill="#fafafa"/>
+    <circle cx="30" cy="0" r="3" fill="#d4d4d4"/>
+    <circle cx="-34" cy="34" r="3.5" fill="#e5e5e5"/>
+    <circle cx="46" cy="-46" r="4" fill="#a3a3a3"/>
+    <circle cx="-72" cy="-42" r="4.5" fill="#fafafa"/>
+    <circle cx="72" cy="72" r="3.5" fill="#737373"/>
+  </g>
+
+  <!-- Corner Framing -->
+  <path d="M 32 48 L 32 32 L 48 32" fill="none" stroke="#404040" stroke-width="1.5"/>
+  <path d="M 1168 232 L 1168 248 L 1152 248" fill="none" stroke="#404040" stroke-width="1.5"/>
+
+  <!-- Content -->
+  <text x="72" y="88" fill="#737373" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="12" letter-spacing="3">NEXORA // PERSONAL COSMOS</text>
+  <text x="72" y="146" fill="#fafafa" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="48" font-weight="700" letter-spacing="-0.8">NEXORA</text>
+  <text x="72" y="186" fill="#a3a3a3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17">Local-First 3D Spatial Productivity Universe with Optional Java 21 Cloud Sync</text>
+
+  <!-- Tech Pill Bar -->
+  <g transform="translate(72, 214)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#d4d4d4">
+    <rect x="0" y="0" width="90" height="24" rx="2" fill="#171717" stroke="#2e2e2e"/>
+    <text x="14" y="16">THREE.JS</text>
+    <rect x="100" y="0" width="84" height="24" rx="2" fill="#171717" stroke="#2e2e2e"/>
+    <text x="114" y="16">REACT 18</text>
+    <rect x="194" y="0" width="110" height="24" rx="2" fill="#171717" stroke="#2e2e2e"/>
+    <text x="206" y="16">SPRING BOOT 3</text>
+    <rect x="314" y="0" width="78" height="24" rx="2" fill="#171717" stroke="#2e2e2e"/>
+    <text x="328" y="16">JAVA 21</text>
+  </g>
+</svg>
