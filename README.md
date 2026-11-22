@@ -1,155 +1,125 @@
-# Personal Cosmos 🪐✨
+<div align="center">
+  <img src="docs/assets/banner.svg" alt="Nexora — Personal Cosmos 3D Productivity Environment" width="100%" />
 
-Personal Cosmos is a personal operating system and productivity universe built with React 18, React Three Fiber, and a Spring Boot Java backend. It organizes daily life, mindfulness, finances, knowledge, and focus across 7 celestial worlds within an interactive 3D solar system.
+  <br /><br />
 
-Designed local-first with offline PWA support, optional account creation enables seamless cross-device cloud sync and file storage without compromising privacy or local utility.
-
----
-
-## 🌌 The 7 Celestial Worlds
-
-1. **🌍 Earth — Daily Rhythm & Agenda**
-   - Interactive calendar schedule and timeline block planner.
-   - Task list with inline editing, category tagging, and undo actions.
-   - Dynamic greetings attuned to the user's localized time zone.
-
-2. **🌙 Moon — Personal Wellbeing**
-   - Restful sleep tracking (hours, minutes, quality scoring, and wave visualization).
-   - Daily 8-glass hydration gauge with quick-increment controls.
-   - Energy rhythm slider and menstrual/fertile phase cycle tracker.
-
-3. **🔴 Mars — Knowledge Vault & Secure Files**
-   - Knowledge card repository with tags and descriptions.
-   - Multipart file upload directly to the Java backend when signed in, with download and removal capabilities.
-   - Local fallback storage for offline use.
-
-4. **🪐 Saturn — Deep Work & Focus Orbit**
-   - Drift-resistant timestamp focus timer with pause, resume, and desktop notifications.
-   - Procedural Web Audio API ambient noise generator (no external audio assets).
-   - Session completion history with daily comparison metrics and undo support.
-
-5. **⚡ Mercury — Quick Capture & Checklists**
-   - Rapid item capture with priority categorization.
-   - Due date tracking with automated overdue indicator chips.
-   - Instant undo toast upon item deletion.
-
-6. **🪙 Jupiter — Financial Clarity & Budgeting**
-   - Multi-currency spending tracker supporting USD, EUR, GBP, INR, JPY, and more.
-   - Monthly budget threshold tracker with dynamic percentage calculation.
-   - Income and expense logging with categorized filters.
-
-7. **🌊 Neptune — Curated Bookmarks Vault**
-   - Bookmarking engine with tags, folders, and real-time search.
-   - Native HTML bookmarks file importer (compatible with Chrome, Safari, and Firefox bookmark exports).
+  <p>
+    <img src="https://img.shields.io/badge/React-18-262626?style=flat-square&logo=react&logoColor=white&labelColor=111111" alt="React 18" />
+    <img src="https://img.shields.io/badge/Three.js-React_Three_Fiber-262626?style=flat-square&logo=threedotjs&logoColor=white&labelColor=111111" alt="Three.js / R3F" />
+    <img src="https://img.shields.io/badge/Backend-Spring_Boot_3_/_Java_21-262626?style=flat-square&logo=springboot&logoColor=white&labelColor=111111" alt="Spring Boot 3 / Java 21" />
+    <img src="https://img.shields.io/badge/Architecture-Local--First_PWA-fafafa?style=flat-square&labelColor=111111" alt="Local-First PWA" />
+    <img src="https://img.shields.io/badge/License-MIT-262626?style=flat-square&labelColor=111111" alt="MIT License" />
+  </p>
+</div>
 
 ---
 
-## 🏗️ Architecture & Technology Stack
+## Overview
+
+**Nexora (Personal Cosmos)** is an interactive 3D productivity universe built with **React 18**, **React Three Fiber / Three.js**, **GSAP 3**, and an optional **Spring Boot 3 (Java 21)** cloud synchronization backend.
+
+Daily planning, wellbeing tracking, deep-work timers, knowledge notes, personal finance, and curated bookmarks are organized across **seven orbiting celestial worlds** inside an interactive solar system. The application runs **100% local-first** in the browser with offline PWA caching, and seamlessly upgrades to cross-device cloud sync and file storage when connected to the Java API.
+
+---
+
+## The Seven Productivity Worlds
+
+| World | Domain | Key Capabilities |
+| :--- | :--- | :--- |
+| **Earth** | Daily Rhythm & Agenda | Interactive schedule timeline, inline-editable task list with category tags and undo, localized time-zone greetings. |
+| **Moon** | Personal Wellbeing | Sleep duration and quality scoring with wave visualization, 8-glass daily hydration gauge, energy rhythm slider, and cycle tracker. |
+| **Mars** | Knowledge Vault & Files | Tagged knowledge cards plus multipart file uploads (`<= 20 MB`) to the Java backend when signed in, with offline local fallback. |
+| **Saturn** | Deep Work & Focus | Drift-resistant timestamp focus timer with desktop notifications, procedural Web Audio ambient noise (zero audio assets), and session history. |
+| **Mercury** | Quick Capture & Checklists | Rapid item capture with priority levels, automated overdue indicator chips, and instant undo toast on deletion. |
+| **Jupiter** | Financial Clarity | Multi-currency expense and income tracking (`USD`, `EUR`, `GBP`, `INR`, `JPY`, etc.), monthly budget thresholds, and category filters. |
+| **Neptune** | Bookmarks Vault | Folder- and tag-organized bookmark manager with real-time search and native HTML bookmark importer (Chrome, Safari, Firefox). |
+
+---
+
+## Architecture & Technology Stack
+
+```mermaid
+flowchart LR
+    UI["3D Solar System (R3F / Three.js / GSAP)"] --> STATE["Versioned Local Storage (personal-cosmos:*)"]
+    UI --> AUDIO["Web Audio API Ambient Synthesizer"]
+    STATE -->|Optional Sign-In| SYNC["Cloud Sync Client (baseVersion)"]
+    SYNC -->|HTTPS / JWT| API["Spring Boot 3 / Java 21 API (/api/v1)"]
+    API --> DB["H2 (Dev) / PostgreSQL 16 + Flyway (Prod)"]
+    API --> FILES["Local Disk File Vault (/api/v1/files)"]
+```
 
 ### Frontend
-- **Framework**: React 18 (single-page application) with Vite 6.
-- **3D Visualization**: `@react-three/fiber`, `@react-three/drei`, `three` (canvas procedural textures, ambient cosmic lighting).
-- **Transitions**: GSAP 3 (staggered entrance, planetary orbital zoom).
-- **Styling**: Hand-crafted CSS design system in `src/App.css` utilizing custom glassmorphism tokens and Tailwind CSS.
-- **Routing**: `react-router-dom` with deep links (`/world/:planetId`) and graceful fallback.
-- **Accessibility**: ARIA dialog landmarks, focus management via `focus-trap-react`, skip link navigation, keyboard navigation, and full WCAG 2.1 compliance verified by `@axe-core/playwright`.
-- **PWA**: `vite-plugin-pwa` with web app manifest, offline service worker caching, and installable icons.
 
-### Backend (Java Only)
-- **Framework**: Spring Boot 3.3.5 targeting Java 21+.
-- **Authentication**: Stateless JWT (`io.jsonwebtoken:jjwt`) with SHA-256 signatures, bcrypt password hashing, and user-scoped endpoints.
-- **Data Storage**:
-  - Development / Testing: H2 in-memory relational database.
-  - Production: PostgreSQL with Flyway database schema migrations (`V1__init.sql`).
-- **State Synchronization**: User-scoped generic JSON state sync engine (`/api/v1/state`) resolving concurrent writes via versioned envelopes and last-write-wins timestamps.
-- **File Storage**: Secure local disk upload handler (`/api/v1/files`) supporting downloads, deletion, and size limits.
+- **UI & Routing:** React 18, Vite 6, `react-router-dom` (`/world/:planetId` deep links), GSAP 3 orbital camera transitions.
+- **3D Graphics:** `@react-three/fiber`, `@react-three/drei`, `three` with runtime procedural canvas planet/cloud textures (`src/utils/planetTextures.js`).
+- **Styling & Accessibility:** Custom glassmorphism CSS design system (`src/App.css`) + Tailwind CSS, ARIA dialog landmarks, `focus-trap-react`, keyboard navigation, and WCAG 2.1 verification via `@axe-core/playwright`.
+- **Offline PWA:** `vite-plugin-pwa` service worker caching and versioned `localStorage` migrations (`src/utils/storageMigrations.js`).
+
+### Optional Backend (Java 21)
+
+- **Framework:** Spring Boot 3.3.5 (`server/`), targeting JDK 21+ with Maven Wrapper (`mvnw`).
+- **Authentication:** Stateless HMAC-SHA256 JWT (`io.jsonwebtoken:jjwt`) and bcrypt password hashing.
+- **Optimistic State Sync (`/api/v1/state`):** Per-user JSON document sync with `baseVersion` conflict detection (`HTTP 409`).
+- **File Vault (`/api/v1/files`):** Authenticated multipart upload/download/delete up to `20 MB` with sanitized display filenames.
+- **Persistence:** H2 in-memory database for development/testing; PostgreSQL 16 + Flyway (`V1__init.sql`) for production.
+
+See [`server/README.md`](server/README.md) for the complete Java backend API reference and environment variables.
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
-- **Node.js**: >= 18.0.0
-- **Java**: JDK 21+ (for running the Java backend)
 
-### 1. Installation
+- **Node.js** `>= 18`
+- **JDK 21+** *(optional — required only for the Java cloud sync backend)*
+
+### Option A: Local-First Frontend Only
 
 ```bash
-# Clone the repository
-git clone https://github.com/usernametan/nexora.git
-cd nexora
-
-# Install frontend dependencies
 npm install
-```
-
-### 2. Running Locally
-
-#### Option A: Local-First Frontend Only (Mock Mode)
-The frontend functions entirely independently without a backend required:
-```bash
 npm run dev
 ```
-Open [http://localhost:5173](http://localhost:5173).
 
-#### Option B: Full Stack (Frontend + Java Backend)
-In terminal 1 (start Java Spring Boot API):
+Open `http://localhost:5173`. All seven worlds work offline using browser storage.
+
+### Option B: Full Stack (Frontend + Java 21 Backend)
+
+Terminal 1 — Start the Spring Boot API (`http://127.0.0.1:8080`):
 ```bash
 npm run dev:api
 ```
-*(Listens on `http://127.0.0.1:8080`)*
 
-In terminal 2 (start Vite dev server with `/api` proxy):
+Terminal 2 — Start the Vite dev server with `/api` proxy (`http://localhost:5173`):
 ```bash
 npm run dev
 ```
-Open [http://localhost:5173](http://localhost:5173). Create an account in Settings to test cloud sync and file uploads.
 
----
-
-## 🧪 Testing
-
-```bash
-# Run ESLint (covers React, Vite, and Playwright tests)
-npm run lint
-
-# Run Vitest unit tests (formatters, storage migration, backups)
-npm test
-
-# Run backend Spring Boot integration tests (33 tests)
-npm run test:backend
-
-# Run Playwright End-to-End Suite (Cosmos 3D, Mobile, Routing, A11y, Sync)
-npm run test:e2e
-
-# Run E2E suite with backend integration enabled
-E2E_BACKEND=1 npm run test:e2e
-```
-
----
-
-## 🐳 Docker Deployment
-
-A complete production stack containing PostgreSQL 16, the Spring Boot Java API, and an Nginx SPA reverse proxy is provided via Docker Compose:
+### Option C: Docker Compose (PostgreSQL 16 + Java API + Nginx SPA)
 
 ```bash
 docker compose up --build -d
 ```
 
-Services started:
-- `web`: `http://localhost:80` (React SPA + Nginx)
-- `api`: `http://localhost:8080` (Spring Boot API)
-- `db`: `localhost:5432` (PostgreSQL)
+- **Web SPA:** `http://localhost:80`
+- **Java API:** `http://localhost:8080`
+- **PostgreSQL:** `localhost:5432`
 
 ---
 
-## ☁️ Static Hosting (Vercel / Netlify)
+## Testing & Verification
 
-- **Netlify**: Configured via `netlify.toml` and `public/_redirects`.
-- **Vercel**: Configured via `vercel.json` with SPA route rewrites.
+```bash
+npm run lint              # ESLint 9 across React, Vite, and Playwright specs
+npm test                  # Vitest unit tests (formatting, storage migrations, backups)
+npm run test:backend      # Spring Boot MockMvc integration tests (33 tests)
+npm run test:e2e          # Playwright E2E + Axe WCAG 2.1 accessibility suite
+E2E_BACKEND=1 npm run test:e2e   # Full-stack E2E with Java backend sync enabled
+```
 
 ---
 
-## 📄 License
+## Deployment & License
 
-MIT.
+- **Static Frontend:** Pre-configured for **Vercel** (`vercel.json`) and **Netlify** (`netlify.toml`, `public/_redirects`).
+- **License:** MIT
