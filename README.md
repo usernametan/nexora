@@ -4,11 +4,22 @@
   <br /><br />
 
   <p>
+    <img src="https://img.shields.io/github/actions/workflow/status/usernametan/nexora/ci.yml?style=flat-square&label=CI&labelColor=111111&color=262626" alt="CI Status" />
     <img src="https://img.shields.io/badge/React-18-262626?style=flat-square&logo=react&logoColor=white&labelColor=111111" alt="React 18" />
     <img src="https://img.shields.io/badge/Three.js-React_Three_Fiber-262626?style=flat-square&logo=threedotjs&logoColor=white&labelColor=111111" alt="Three.js / R3F" />
     <img src="https://img.shields.io/badge/Backend-Spring_Boot_3_/_Java_21-262626?style=flat-square&logo=springboot&logoColor=white&labelColor=111111" alt="Spring Boot 3 / Java 21" />
     <img src="https://img.shields.io/badge/Architecture-Local--First_PWA-fafafa?style=flat-square&labelColor=111111" alt="Local-First PWA" />
-    <img src="https://img.shields.io/badge/License-MIT-262626?style=flat-square&labelColor=111111" alt="MIT License" />
+    <img src="https://img.shields.io/github/last-commit/usernametan/nexora?style=flat-square&label=Updated&labelColor=111111&color=262626" alt="Last Commit" />
+  </p>
+
+  <p>
+    <sub>
+      <a href="#overview">Overview</a> &nbsp;·&nbsp;
+      <a href="#the-seven-productivity-worlds">7 Worlds</a> &nbsp;·&nbsp;
+      <a href="#architecture--technology-stack">Architecture</a> &nbsp;·&nbsp;
+      <a href="#getting-started">Setup</a> &nbsp;·&nbsp;
+      <a href="#testing--verification">Testing</a>
+    </sub>
   </p>
 </div>
 
